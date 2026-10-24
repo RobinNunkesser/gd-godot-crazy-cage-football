@@ -162,6 +162,10 @@ func _test_main_scene() -> bool:
 	assert(main_scene.camera != null, "Cage camera should exist")
 	assert(main_scene.player2.is_bot, "Player 2 should default to AI bot for single-player")
 	
+	# Visuals & WorldEnvironment
+	assert(main_scene.has_node("WorldEnvironment"), "WorldEnvironment must exist for stadium skybox")
+	assert(main_scene.has_node("CageFloor"), "CageFloor must exist")
+	
 	# Tore müssen durch feste StaticBody3D-Wände geschlossen sein
 	assert(main_scene.has_node("LeftGoal_BackNet"), "Left goal back wall must exist")
 	assert(main_scene.has_node("RightGoal_BackNet"), "Right goal back wall must exist")

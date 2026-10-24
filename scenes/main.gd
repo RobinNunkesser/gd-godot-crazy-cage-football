@@ -56,15 +56,38 @@ func _build_audio() -> void:
 	add_child(whistle_player)
 
 func _build_scene() -> void:
-	# 1. Umwelt & Licht
+	# 1. Umwelt, Skybox & Flutlicht
+	var env = Environment.new()
+	env.background_mode = Environment.BG_SKY
+	var sky = Sky.new()
+	var skybox_path = "res://assets/textures/cage_skybox.jpg"
+	if ResourceLoader.exists(skybox_path):
+		var pano = PanoramaSkyMaterial.new()
+		pano.panorama = load(skybox_path)
+		sky.sky_material = pano
+	else:
+		var proc_sky = ProceduralSkyMaterial.new()
+		sky.sky_material = proc_sky
+	env.sky = sky
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.glow_enabled = true
+	env.glow_intensity = 0.4
+	env.glow_bloom = 0.15
+	
+	var world_env = WorldEnvironment.new()
+	world_env.name = "WorldEnvironment"
+	world_env.environment = env
+	add_child(world_env)
+	
 	var sun = DirectionalLight3D.new()
 	sun.name = "StadiumLight"
 	sun.position = Vector3(15, 25, 15)
 	sun.rotation_degrees = Vector3(-55, 40, 0)
+	sun.light_energy = 1.3
 	sun.shadow_enabled = true
 	add_child(sun)
 	
-	# 2. Boden (Stahl-Riffelblech Look)
+	# 2. Boden (Authentischer Street-Soccer Cage-Kunstrasen)
 	var floor_body = StaticBody3D.new()
 	floor_body.name = "CageFloor"
 	floor_body.position = Vector3(0, -0.2, 0)
@@ -84,9 +107,16 @@ func _build_scene() -> void:
 	var floor_inst = MeshInstance3D.new()
 	floor_inst.mesh = floor_box
 	var floor_mat = StandardMaterial3D.new()
-	floor_mat.albedo_color = Color(0.28, 0.32, 0.36)
-	floor_mat.metallic = 0.6
-	floor_mat.roughness = 0.4
+	var turf_path = "res://assets/textures/pitch_turf.jpg"
+	if ResourceLoader.exists(turf_path):
+		floor_mat.albedo_texture = load(turf_path)
+		floor_mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
+		floor_mat.roughness = 0.65
+		floor_mat.metallic = 0.05
+	else:
+		floor_mat.albedo_color = Color(0.28, 0.32, 0.36)
+		floor_mat.metallic = 0.6
+		floor_mat.roughness = 0.4
 	floor_inst.material_override = floor_mat
 	floor_body.add_child(floor_inst)
 	add_child(floor_body)
@@ -149,7 +179,7 @@ func _build_scene() -> void:
 	camera.current = true
 	add_child(camera)
 
-func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: Color = Color(0.4, 0.45, 0.5, 0.6)) -> void:
+func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: Color = Color(0.75, 0.8, 0.85, 0.75)) -> void:
 	var body = StaticBody3D.new()
 	body.name = wall_name
 	body.position = pos
@@ -165,9 +195,20 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 	box.size = size
 	mesh_inst.mesh = box
 	var mat = StandardMaterial3D.new()
-	mat.albedo_color = custom_color
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.roughness = 0.3
+	var fence_path = "res://assets/textures/chainlink_fence.jpg"
+	if ResourceLoader.exists(fence_path):
+		mat.albedo_texture = load(fence_path)
+		var max_span = maxf(size.x, size.z)
+		mat.uv1_scale = Vector3(max_span * 0.45, size.y * 0.45, 1.0)
+		mat.albedo_color = custom_color
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mat.metallic = 0.85
+		mat.roughness = 0.25
+	else:
+		mat.albedo_color = custom_color
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.roughness = 0.3
 	mesh_inst.material_override = mat
 	body.add_child(mesh_inst)
 	add_child(body)

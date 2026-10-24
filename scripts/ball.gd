@@ -53,8 +53,14 @@ func _setup_visuals() -> void:
 		sphere.height = CageConfig.BALL_RADIUS * 2.0
 		
 		var mat = StandardMaterial3D.new()
-		mat.albedo_color = Color(0.96, 0.94, 0.88) # Classic soccer white/cream
-		mat.roughness = 0.35
+		var ball_tex_path = "res://assets/textures/soccer_ball.jpg"
+		if ResourceLoader.exists(ball_tex_path):
+			mat.albedo_texture = load(ball_tex_path)
+			mat.albedo_color = Color(1.0, 1.0, 1.0)
+		else:
+			mat.albedo_color = Color(0.96, 0.94, 0.88) # Classic soccer white/cream
+		mat.roughness = 0.25
+		mat.metallic = 0.05
 		_mesh_instance.mesh = sphere
 		_mesh_instance.material_override = mat
 		add_child(_mesh_instance)
