@@ -6,6 +6,8 @@ const CageConfig = preload("res://scripts/config.gd")
 ## Match-State-Machine für Crazy Cage Football
 
 enum MatchState {
+	LOBBY,
+	WARMUP,
 	KICKOFF,
 	PLAYING,
 	GOAL_SCORED,
@@ -20,30 +22,45 @@ signal timer_updated(time_remaining: float)
 signal goal_celebrated(scoring_team: int)
 signal match_finished(winning_team: int)
 
-var current_state: MatchState = MatchState.KICKOFF
+var current_state: MatchState = MatchState.LOBBY
 var time_remaining: float = CageConfig.MATCH_DURATION_SECONDS
 var celebration_timer: float = 0.0
+var warmup_timer: float = 3.0
 var scores: Dictionary = {1: 0, 2: 0} # Team 1 = Rot (links), Team 2 = Blau (rechts)
 
-func reset_match(duration: float = CageConfig.MATCH_DURATION_SECONDS) -> void:
+func enter_lobby() -> void:
+	scores = {1: 0, 2: 0}
+	current_state = MatchState.LOBBY
+	state_changed.emit(current_state)
+
+func start_match(duration: float = CageConfig.MATCH_DURATION_SECONDS) -> void:
 	scores = {1: 0, 2: 0}
 	time_remaining = duration
 	celebration_timer = 0.0
-	current_state = MatchState.KICKOFF
+	warmup_timer = 3.0
+	current_state = MatchState.WARMUP
 	state_changed.emit(current_state)
 	score_updated.emit(1, 0)
 	score_updated.emit(2, 0)
 	timer_updated.emit(time_remaining)
 
+func reset_match(duration: float = CageConfig.MATCH_DURATION_SECONDS) -> void:
+	start_match(duration)
+
 func start_play() -> void:
-	if current_state == MatchState.KICKOFF:
+	if current_state == MatchState.KICKOFF or current_state == MatchState.WARMUP:
 		current_state = MatchState.PLAYING
 		state_changed.emit(current_state)
 
 func update_logic(delta: float) -> void:
 	match current_state:
-		MatchState.KICKOFF:
-			pass # Wartet auf ersten Ballkontakt
+		MatchState.LOBBY:
+			pass
+		MatchState.WARMUP:
+			warmup_timer -= delta
+			if warmup_timer <= 0.0:
+				current_state = MatchState.PLAYING
+				state_changed.emit(current_state)
 		MatchState.PLAYING:
 			time_remaining -= delta
 			timer_updated.emit(maxf(0.0, time_remaining))

@@ -3,10 +3,28 @@ extends RigidBody3D
 
 const CageConfig = preload("res://scripts/config.gd")
 
+enum ControlType {
+	OFF,
+	HUMAN_KB1,
+	HUMAN_KB2,
+	GAMEPAD_0,
+	GAMEPAD_1,
+	GAMEPAD_2,
+	GAMEPAD_3,
+	AI_BOT
+}
+
 @export var player_id: int = 1
+@export var team_id: int = 1 # 1 = Red (attacks right), 2 = Blue (attacks left)
 @export var ball_color: Color = Color(0.9, 0.2, 0.2)
-@export var is_bot: bool = false
+@export var control_type: ControlType = ControlType.HUMAN_KB1
 @export var bot_difficulty: float = 1.0
+
+var is_bot: bool:
+	get:
+		return control_type == ControlType.AI_BOT
+	set(val):
+		control_type = ControlType.AI_BOT if val else ControlType.HUMAN_KB1
 
 var boost_cooldown: float = 0.0
 var target_ball: Node3D = null
@@ -110,7 +128,7 @@ func _handle_bot_ai(_delta: float) -> void:
 	var ball_pos = target_ball.global_position if (is_inside_tree() and target_ball.is_inside_tree()) else target_ball.position
 	
 	# Ziel-Tor: Team 1 (Rot) greift nach rechts (X > 0) an; Team 2 (Blau) greift nach links (X < 0) an.
-	var goal_x = CageConfig.CAGE_WIDTH_X * 0.5 if player_id == 1 else -CageConfig.CAGE_WIDTH_X * 0.5
+	var goal_x = CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else -CageConfig.CAGE_WIDTH_X * 0.5
 	var to_goal = Vector2(goal_x - ball_pos.x, 0.0).normalized()
 	
 	# Positioniere dich leicht hinter den Ball bezogen auf das Ziel-Tor
@@ -134,30 +152,71 @@ func _handle_bot_ai(_delta: float) -> void:
 			trigger_boost(dir_to_ball)
 
 func _handle_input(_delta: float) -> void:
-	var prefix = "p%d_" % player_id
-	var input_vec = Vector2.ZERO
+	if control_type == ControlType.OFF or control_type == ControlType.AI_BOT:
+		return
 	
-	if Input.is_action_pressed(prefix + "left"):
-		input_vec.x -= 1.0
-	if Input.is_action_pressed(prefix + "right"):
-		input_vec.x += 1.0
-	if Input.is_action_pressed(prefix + "up"):
-		input_vec.y -= 1.0
-	if Input.is_action_pressed(prefix + "down"):
-		input_vec.y += 1.0
+	var input_vec = Vector2.ZERO
+	var jump_pressed = false
+	var boost_pressed = false
+	
+	match control_type:
+		ControlType.HUMAN_KB1:
+			if Input.is_action_pressed("p1_left") or Input.is_key_pressed(KEY_A):
+				input_vec.x -= 1.0
+			if Input.is_action_pressed("p1_right") or Input.is_key_pressed(KEY_D):
+				input_vec.x += 1.0
+			if Input.is_action_pressed("p1_up") or Input.is_key_pressed(KEY_W):
+				input_vec.y -= 1.0
+			if Input.is_action_pressed("p1_down") or Input.is_key_pressed(KEY_S):
+				input_vec.y += 1.0
+			jump_pressed = Input.is_action_just_pressed("p1_jump") or Input.is_key_pressed(KEY_SPACE)
+			boost_pressed = Input.is_action_just_pressed("p1_boost") or Input.is_key_pressed(KEY_SHIFT)
+			
+		ControlType.HUMAN_KB2:
+			if Input.is_action_pressed("p2_left") or Input.is_key_pressed(KEY_LEFT):
+				input_vec.x -= 1.0
+			if Input.is_action_pressed("p2_right") or Input.is_key_pressed(KEY_RIGHT):
+				input_vec.x += 1.0
+			if Input.is_action_pressed("p2_up") or Input.is_key_pressed(KEY_UP):
+				input_vec.y -= 1.0
+			if Input.is_action_pressed("p2_down") or Input.is_key_pressed(KEY_DOWN):
+				input_vec.y += 1.0
+			jump_pressed = Input.is_action_just_pressed("p2_jump") or Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_KP_ENTER)
+			boost_pressed = Input.is_action_just_pressed("p2_boost") or Input.is_key_pressed(KEY_CTRL)
+			
+		ControlType.GAMEPAD_0, ControlType.GAMEPAD_1, ControlType.GAMEPAD_2, ControlType.GAMEPAD_3:
+			var dev = int(control_type) - int(ControlType.GAMEPAD_0)
+			var raw_x = Input.get_joy_axis(dev, JOY_AXIS_LEFT_X)
+			var raw_y = Input.get_joy_axis(dev, JOY_AXIS_LEFT_Y)
+			if absf(raw_x) > 0.2:
+				input_vec.x = raw_x
+			if absf(raw_y) > 0.2:
+				input_vec.y = raw_y
+			jump_pressed = Input.is_joy_button_pressed(dev, JOY_BUTTON_A)
+			boost_pressed = Input.is_joy_button_pressed(dev, JOY_BUTTON_B) or Input.is_joy_button_pressed(dev, JOY_BUTTON_RIGHT_SHOULDER)
 	
 	if input_vec.length_squared() > 0.01:
 		input_vec = input_vec.normalized()
 		var move_dir = Vector3(input_vec.x, 0.0, input_vec.y)
 		apply_central_force(move_dir * CageConfig.PLAYER_DRIVE_FORCE)
 	
-	# Sprung / Zıplama
-	if Input.is_action_just_pressed(prefix + "jump"):
+	if jump_pressed:
 		trigger_jump()
-	
-	# Sprint / Boost
-	if Input.is_action_just_pressed(prefix + "boost") and boost_cooldown <= 0.0:
+	if boost_pressed and boost_cooldown <= 0.0:
 		trigger_boost(input_vec)
+
+func set_control_type(new_type: ControlType) -> void:
+	control_type = new_type
+	if control_type == ControlType.OFF:
+		visible = false
+		freeze = true
+		collision_layer = 0
+		collision_mask = 0
+	else:
+		visible = true
+		freeze = false
+		collision_layer = 1
+		collision_mask = 1
 
 func trigger_jump() -> void:
 	# Prüfen, ob der Spieler nahe dem Boden ist

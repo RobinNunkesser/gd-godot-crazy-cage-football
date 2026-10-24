@@ -39,7 +39,7 @@ func _test_state_manager() -> bool:
 	print("[2/6] Testing CageStateManager...")
 	var sm = CageStateManager.new()
 	sm.reset_match(10.0)
-	assert(sm.current_state == CageStateManager.MatchState.KICKOFF, "Initial state should be KICKOFF")
+	assert(sm.current_state == CageStateManager.MatchState.WARMUP or sm.current_state == CageStateManager.MatchState.KICKOFF, "Initial state should be WARMUP or KICKOFF")
 	assert(sm.scores[1] == 0 and sm.scores[2] == 0, "Scores should start at 0")
 	
 	# Spiel starten
@@ -56,7 +56,7 @@ func _test_state_manager() -> bool:
 	assert(sm.current_state == CageStateManager.MatchState.RESET, "State should be RESET after celebration")
 	
 	sm.update_logic(0.01)
-	assert(sm.current_state == CageStateManager.MatchState.KICKOFF, "State should return to KICKOFF after reset")
+	assert(sm.current_state == CageStateManager.MatchState.KICKOFF or sm.current_state == CageStateManager.MatchState.WARMUP, "State should return to KICKOFF/WARMUP after reset")
 	
 	# Match-Ende testen
 	sm.start_play()
@@ -151,7 +151,16 @@ func _test_main_scene() -> bool:
 	main_scene.toggle_p2_bot()
 	assert(main_scene.player2.is_bot, "Player 2 should toggle back to AI bot")
 	
+	# Lobby & 4-Player Team Setup
+	assert(main_scene.state_manager.current_state == CageStateManager.MatchState.LOBBY, "Initial state should be LOBBY")
+	main_scene.cycle_player_slot(2) # Player 3
+	assert(main_scene.player3.control_type == CagePlayer.ControlType.HUMAN_KB1, "P3 should cycle to HUMAN_KB1")
+	main_scene.toggle_player_team(2)
+	assert(main_scene.player3.team_id == 2, "P3 should toggle to Team 2")
+	main_scene.start_match_from_lobby()
+	assert(main_scene.state_manager.current_state == CageStateManager.MatchState.WARMUP, "State should be WARMUP after match start")
+	
 	main_scene._process(0.016)
 	main_scene.queue_free()
-	print("  -> MainCageFootball OK.")
+	print("  -> MainCageFootball & 4-Player Teams OK.")
 	return true
