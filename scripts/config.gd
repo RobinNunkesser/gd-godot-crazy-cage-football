@@ -40,7 +40,8 @@ const MATCH_DURATION_SECONDS: float = 180.0 # 3 Minuten
 const CELEBRATION_DURATION: float = 2.5
 const KICKOFF_DELAY: float = 1.0
 
-# Kamera
-const CAMERA_HEIGHT: float = 16.0
-const CAMERA_OFFSET_Z: float = 18.0
+# Kamera (Dynamische Nahansicht)
+const CAMERA_HEIGHT: float = 9.5
+const CAMERA_OFFSET_Z: float = 12.0
 const CAMERA_LERP_SPEED: float = 4.5
+

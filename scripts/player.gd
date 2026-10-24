@@ -5,6 +5,8 @@ const CageConfig = preload("res://scripts/config.gd")
 
 @export var player_id: int = 1
 @export var ball_color: Color = Color(0.9, 0.2, 0.2)
+@export var is_bot: bool = false
+@export var bot_difficulty: float = 1.0
 
 var boost_cooldown: float = 0.0
 var target_ball: Node3D = null
@@ -93,9 +95,43 @@ func _physics_process(delta: float) -> void:
 	if boost_cooldown > 0.0:
 		boost_cooldown -= delta
 	
-	_handle_input(delta)
+	if is_bot:
+		_handle_bot_ai(delta)
+	else:
+		_handle_input(delta)
 	_clamp_speed()
 	_update_eyes()
+
+func _handle_bot_ai(_delta: float) -> void:
+	if not is_instance_valid(target_ball):
+		return
+	
+	var my_pos = global_position if is_inside_tree() else position
+	var ball_pos = target_ball.global_position if (is_inside_tree() and target_ball.is_inside_tree()) else target_ball.position
+	
+	# Ziel-Tor: Team 1 (Rot) greift nach rechts (X > 0) an; Team 2 (Blau) greift nach links (X < 0) an.
+	var goal_x = CageConfig.CAGE_WIDTH_X * 0.5 if player_id == 1 else -CageConfig.CAGE_WIDTH_X * 0.5
+	var to_goal = Vector2(goal_x - ball_pos.x, 0.0).normalized()
+	
+	# Positioniere dich leicht hinter den Ball bezogen auf das Ziel-Tor
+	var attack_spot = Vector2(ball_pos.x - to_goal.x * 0.8, ball_pos.z)
+	var steer_vec = attack_spot - Vector2(my_pos.x, my_pos.z)
+	var dist_to_ball = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).length()
+	
+	if steer_vec.length_squared() > 0.01:
+		steer_vec = steer_vec.normalized()
+		var move_dir = Vector3(steer_vec.x, 0.0, steer_vec.y)
+		apply_central_force(move_dir * CageConfig.PLAYER_DRIVE_FORCE * bot_difficulty)
+	
+	# Zıplama Sprung bei hoher Kugel in Tor-Nähe
+	if dist_to_ball < 2.2 and ball_pos.y > 1.0:
+		trigger_jump()
+	
+	# Boost / Rammstoß wenn Ball im Schussfeld liegt
+	if dist_to_ball < 2.5 and boost_cooldown <= 0.0:
+		var dir_to_ball = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).normalized()
+		if dir_to_ball.dot(to_goal) > 0.6:
+			trigger_boost(dir_to_ball)
 
 func _handle_input(_delta: float) -> void:
 	var prefix = "p%d_" % player_id

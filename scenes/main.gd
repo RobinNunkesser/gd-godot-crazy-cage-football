@@ -104,6 +104,7 @@ func _build_scene() -> void:
 	player2 = CagePlayer.new()
 	player2.name = "Player2_Blue"
 	player2.player_id = 2
+	player2.is_bot = true # Default: AI Bot für Single Player!
 	player2.ball_color = Color(0.2, 0.55, 0.95)
 	player2.position = Vector3(6.0, CageConfig.PLAYER_RADIUS, 0.0)
 	player2.target_ball = ball
@@ -211,7 +212,30 @@ func _build_ui() -> void:
 	ui_banner_label.add_theme_font_size_override("font_size", 36)
 	ui_root.add_child(ui_banner_label)
 	
+	# Bottom Hint
+	var ui_hint = Label.new()
+	ui_hint.text = "[B] oder [Tab]: P2 AI-Bot ein/aus  |  [R]: Neustart  |  P1: WASD + Space (Zıplama) + Shift (Boost)"
+	ui_hint.position = Vector2(40, 670)
+	ui_hint.add_theme_font_size_override("font_size", 16)
+	ui_hint.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 0.8))
+	ui_root.add_child(ui_hint)
+	
 	add_child(canvas)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_B or event.keycode == KEY_TAB:
+			toggle_p2_bot()
+
+func toggle_p2_bot() -> void:
+	if player2:
+		player2.is_bot = not player2.is_bot
+		_update_score_label()
+
+func _update_score_label() -> void:
+	if ui_score_label and state_manager:
+		var p2_mode = "AI" if (player2 and player2.is_bot) else "P2"
+		ui_score_label.text = "RED  %d : %d  BLUE (%s)" % [state_manager.scores[1], state_manager.scores[2], p2_mode]
 
 func _process(delta: float) -> void:
 	if state_manager:
@@ -262,8 +286,7 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 				ui_banner_label.text = "DRAW! Press R to rematch"
 
 func _on_score_updated(_team_id: int, _new_score: int) -> void:
-	if ui_score_label and state_manager:
-		ui_score_label.text = "RED  %d : %d  BLUE" % [state_manager.scores[1], state_manager.scores[2]]
+	_update_score_label()
 
 func _on_timer_updated(time_remaining: float) -> void:
 	if ui_timer_label:

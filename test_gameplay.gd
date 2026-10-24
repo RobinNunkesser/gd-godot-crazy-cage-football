@@ -84,8 +84,17 @@ func _test_player_jump() -> bool:
 	player.trigger_jump()
 	assert(player.linear_velocity.y >= 0.0, "Jump should impart upward velocity or force")
 	
+	# Bot AI Steering testen
+	player.is_bot = true
+	var test_ball = Node3D.new()
+	test_ball.position = Vector3(2.0, 0.5, 0.0)
+	root.add_child(test_ball)
+	player.target_ball = test_ball
+	player._handle_bot_ai(0.016)
+	test_ball.queue_free()
+	
 	player.queue_free()
-	print("  -> CagePlayer & Ziplama OK.")
+	print("  -> CagePlayer & Ziplama & Bot OK.")
 	return true
 
 func _test_ball_physics() -> bool:
@@ -134,6 +143,13 @@ func _test_main_scene() -> bool:
 	assert(main_scene.player2 != null, "Player 2 should exist")
 	assert(main_scene.ball != null, "Soccer ball should exist")
 	assert(main_scene.camera != null, "Cage camera should exist")
+	assert(main_scene.player2.is_bot, "Player 2 should default to AI bot for single-player")
+	
+	# Bot Toggle testen
+	main_scene.toggle_p2_bot()
+	assert(not main_scene.player2.is_bot, "Player 2 should toggle to Human")
+	main_scene.toggle_p2_bot()
+	assert(main_scene.player2.is_bot, "Player 2 should toggle back to AI bot")
 	
 	main_scene._process(0.016)
 	main_scene.queue_free()
