@@ -1,0 +1,140 @@
+class_name CagePlayer
+extends RigidBody3D
+
+const CageConfig = preload("res://scripts/config.gd")
+
+@export var player_id: int = 1
+@export var ball_color: Color = Color(0.9, 0.2, 0.2)
+
+var boost_cooldown: float = 0.0
+var target_ball: Node3D = null
+
+var _eyes_pivot: Node3D
+var _mesh_instance: MeshInstance3D
+
+func _ready() -> void:
+	mass = CageConfig.PLAYER_MASS
+	
+	var phys_mat = PhysicsMaterial.new()
+	phys_mat.bounce = CageConfig.PLAYER_BOUNCE
+	phys_mat.friction = CageConfig.PLAYER_FRICTION
+	physics_material_override = phys_mat
+	
+	_setup_visuals()
+
+func _setup_visuals() -> void:
+	if not has_node("SphereMesh"):
+		_mesh_instance = MeshInstance3D.new()
+		_mesh_instance.name = "SphereMesh"
+		var sphere = SphereMesh.new()
+		sphere.radius = CageConfig.PLAYER_RADIUS
+		sphere.height = CageConfig.PLAYER_RADIUS * 2.0
+		
+		var mat = StandardMaterial3D.new()
+		mat.albedo_color = ball_color
+		mat.roughness = 0.3
+		mat.metallic = 0.2
+		_mesh_instance.mesh = sphere
+		_mesh_instance.material_override = mat
+		add_child(_mesh_instance)
+	
+	if not has_node("EyesPivot"):
+		_eyes_pivot = Node3D.new()
+		_eyes_pivot.name = "EyesPivot"
+		add_child(_eyes_pivot)
+		
+		# Zwei Comic-Augen
+		for eye_x in [-0.2, 0.2]:
+			var eye = MeshInstance3D.new()
+			var eye_mesh = SphereMesh.new()
+			eye_mesh.radius = 0.13
+			eye_mesh.height = 0.26
+			eye.mesh = eye_mesh
+			eye.position = Vector3(eye_x, 0.25, -0.48)
+			
+			var eye_mat = StandardMaterial3D.new()
+			eye_mat.albedo_color = Color.WHITE
+			eye.material_override = eye_mat
+			_eyes_pivot.add_child(eye)
+			
+			var pupil = MeshInstance3D.new()
+			var pupil_mesh = SphereMesh.new()
+			pupil_mesh.radius = 0.05
+			pupil_mesh.height = 0.10
+			pupil.mesh = pupil_mesh
+			pupil.position = Vector3(0, 0, -0.10)
+			var pupil_mat = StandardMaterial3D.new()
+			pupil_mat.albedo_color = Color.BLACK
+			pupil.material_override = pupil_mat
+			eye.add_child(pupil)
+
+func _physics_process(delta: float) -> void:
+	if boost_cooldown > 0.0:
+		boost_cooldown -= delta
+	
+	_handle_input(delta)
+	_clamp_speed()
+	_update_eyes()
+
+func _handle_input(_delta: float) -> void:
+	var prefix = "p%d_" % player_id
+	var input_vec = Vector2.ZERO
+	
+	if Input.is_action_pressed(prefix + "left"):
+		input_vec.x -= 1.0
+	if Input.is_action_pressed(prefix + "right"):
+		input_vec.x += 1.0
+	if Input.is_action_pressed(prefix + "up"):
+		input_vec.y -= 1.0
+	if Input.is_action_pressed(prefix + "down"):
+		input_vec.y += 1.0
+	
+	if input_vec.length_squared() > 0.01:
+		input_vec = input_vec.normalized()
+		var move_dir = Vector3(input_vec.x, 0.0, input_vec.y)
+		apply_central_force(move_dir * CageConfig.PLAYER_DRIVE_FORCE)
+	
+	# Sprung / Zıplama
+	if Input.is_action_just_pressed(prefix + "jump"):
+		trigger_jump()
+	
+	# Sprint / Boost
+	if Input.is_action_just_pressed(prefix + "boost") and boost_cooldown <= 0.0:
+		trigger_boost(input_vec)
+
+func trigger_jump() -> void:
+	# Prüfen, ob der Spieler nahe dem Boden ist
+	var cur_y = global_position.y if is_inside_tree() else position.y
+	if cur_y <= CageConfig.PLAYER_RADIUS + 0.35:
+		apply_central_impulse(Vector3.UP * CageConfig.PLAYER_JUMP_IMPULSE)
+
+func trigger_boost(input_vec: Vector2) -> void:
+	boost_cooldown = CageConfig.PLAYER_BOOST_COOLDOWN
+	var boost_dir = Vector3.FORWARD
+	if input_vec.length_squared() > 0.01:
+		boost_dir = Vector3(input_vec.x, 0.0, input_vec.y).normalized()
+	elif linear_velocity.length_squared() > 0.1:
+		boost_dir = Vector3(linear_velocity.x, 0.0, linear_velocity.z).normalized()
+	
+	apply_central_impulse(boost_dir * CageConfig.PLAYER_BOOST_IMPULSE)
+
+func _clamp_speed() -> void:
+	var horiz_vel = Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+	if horiz_vel.length() > CageConfig.PLAYER_MAX_SPEED:
+		var clamped = horiz_vel.normalized() * CageConfig.PLAYER_MAX_SPEED
+		linear_velocity.x = clamped.x
+		linear_velocity.z = clamped.z
+
+func _update_eyes() -> void:
+	if _eyes_pivot and is_instance_valid(target_ball) and is_inside_tree() and target_ball.is_inside_tree():
+		var target_pos = target_ball.global_position
+		_eyes_pivot.look_at(target_pos, Vector3.UP)
+
+func reset_to(pos: Vector3) -> void:
+	if is_inside_tree():
+		global_position = pos
+	else:
+		position = pos
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	boost_cooldown = 0.0
