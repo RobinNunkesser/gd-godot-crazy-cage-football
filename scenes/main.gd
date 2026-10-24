@@ -110,8 +110,8 @@ func _build_scene() -> void:
 	var turf_path = "res://assets/textures/pitch_turf.jpg"
 	if ResourceLoader.exists(turf_path):
 		floor_mat.albedo_texture = load(turf_path)
-		floor_mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
-		floor_mat.roughness = 0.65
+		floor_mat.uv1_scale = Vector3(10.0, 6.0, 1.0)
+		floor_mat.roughness = 0.75
 		floor_mat.metallic = 0.05
 	else:
 		floor_mat.albedo_color = Color(0.28, 0.32, 0.36)
@@ -190,27 +190,55 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 	col.shape = shape
 	body.add_child(col)
 	
-	var mesh_inst = MeshInstance3D.new()
-	var box = BoxMesh.new()
-	box.size = size
-	mesh_inst.mesh = box
+	var is_ground_wall = (pos.y - size.y * 0.5 < 0.05) and (size.y > 1.0)
+	var board_height = 0.35 if is_ground_wall else 0.0
+	
+	# 1. Solide Prallwand / Kickboard (Bande) - verhindert Z-Fighting mit dem Spielfeldboden vollständig
+	if is_ground_wall:
+		var board_inst = MeshInstance3D.new()
+		var board_box = BoxMesh.new()
+		board_box.size = Vector3(size.x, board_height, size.z)
+		board_inst.mesh = board_box
+		board_inst.position = Vector3(0, -size.y * 0.5 + board_height * 0.5, 0)
+		
+		var board_mat = StandardMaterial3D.new()
+		board_mat.albedo_color = Color(0.18, 0.20, 0.24) # Solide dunkle Industrie-Bande
+		board_mat.metallic = 0.6
+		board_mat.roughness = 0.3
+		board_mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+		board_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
+		board_inst.material_override = board_mat
+		body.add_child(board_inst)
+	
+	# 2. Drahtgitter-Käfigwand oberhalb der Bande
+	var fence_height = size.y - board_height
+	var fence_inst = MeshInstance3D.new()
+	var fence_box = BoxMesh.new()
+	fence_box.size = Vector3(size.x, fence_height, size.z)
+	fence_inst.mesh = fence_box
+	fence_inst.position = Vector3(0, -size.y * 0.5 + board_height + fence_height * 0.5, 0)
+	
 	var mat = StandardMaterial3D.new()
 	var fence_path = "res://assets/textures/chainlink_fence.jpg"
 	if ResourceLoader.exists(fence_path):
 		mat.albedo_texture = load(fence_path)
 		var max_span = maxf(size.x, size.z)
-		mat.uv1_scale = Vector3(max_span * 0.45, size.y * 0.45, 1.0)
+		mat.uv1_scale = Vector3(max_span * 0.45, fence_height * 0.45, 1.0)
 		mat.albedo_color = custom_color
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		mat.alpha_scissor_threshold = 0.25
+		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.metallic = 0.85
 		mat.roughness = 0.25
 	else:
 		mat.albedo_color = custom_color
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		mat.alpha_scissor_threshold = 0.25
+		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 		mat.roughness = 0.3
-	mesh_inst.material_override = mat
-	body.add_child(mesh_inst)
+	fence_inst.material_override = mat
+	body.add_child(fence_inst)
 	add_child(body)
 
 func _build_side_wall(side: int, wall_name: String) -> void:
@@ -308,7 +336,7 @@ func _build_goal_posts(side: int) -> void:
 func _build_corner_bumpers() -> void:
 	var chamfer_len = 2.6
 	var box_size = Vector3(chamfer_len, CageConfig.CAGE_HEIGHT_Y, CageConfig.WALL_THICKNESS * 1.5)
-	var bumper_color = Color(0.75, 0.65, 0.25, 0.6) # Industrieller Warnbanden-Look
+	var bumper_color = Color(0.85, 0.72, 0.15) # Solide Industrie-Warnbande
 	
 	var corner_configs = [
 		{"name": "CornerBumper_NE", "pos": Vector3(11.1, CageConfig.CAGE_HEIGHT_Y * 0.5, -6.1), "rot": -45.0},
@@ -340,9 +368,10 @@ func _build_corner_bumpers() -> void:
 		mesh_inst.mesh = box
 		var mat = StandardMaterial3D.new()
 		mat.albedo_color = bumper_color
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.metallic = 0.7
-		mat.roughness = 0.2
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
+		mat.metallic = 0.4
+		mat.roughness = 0.35
 		mesh_inst.material_override = mat
 		body.add_child(mesh_inst)
 		
