@@ -132,6 +132,14 @@ func _test_cage_camera() -> bool:
 	assert(cam.position.y > 0.0, "Camera should have elevated height")
 	assert(cam.position.y < CageConfig.CAGE_HEIGHT_Y, "Camera MUST be inside cage vertically (< CAGE_HEIGHT_Y)")
 	assert(cam.position.z < CageConfig.CAGE_DEPTH_Z * 0.5, "Camera MUST be inside cage depth (< CAGE_DEPTH_Z / 2)")
+	assert(cam.fov >= 80.0, "Camera should have wide FOV for tactical distance")
+	
+	# Action-Tracking testen: Ball bewegt sich nach rechts (X = 8.0)
+	test_ball.position = Vector3(8.0, 1.0, 0.0)
+	for _i in range(10):
+		cam.update_camera(0.1)
+	var current_x = cam.global_position.x if cam.is_inside_tree() else cam.position.x
+	assert(current_x > 2.0, "Camera should dynamically follow action along X towards the ball")
 	
 	cam.queue_free()
 	test_ball.queue_free()

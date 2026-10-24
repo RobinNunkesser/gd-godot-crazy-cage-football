@@ -40,8 +40,8 @@ const MATCH_DURATION_SECONDS: float = 180.0 # 3 Minuten
 const CELEBRATION_DURATION: float = 2.0
 const KICKOFF_DELAY: float = 2.0
 
-# Kamera (Im Käfig platziert für immersive Nahansicht)
-const CAMERA_HEIGHT: float = 4.0
-const CAMERA_OFFSET_Z: float = 5.2
-const CAMERA_LERP_SPEED: float = 4.5
+# Kamera (Im Käfig platziert mit Übersicht und Distanz zum Spielgeschehen)
+const CAMERA_HEIGHT: float = 5.2
+const CAMERA_OFFSET_Z: float = 6.0
+const CAMERA_LERP_SPEED: float = 5.0
 

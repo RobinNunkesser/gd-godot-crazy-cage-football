@@ -142,6 +142,7 @@ func _build_scene() -> void:
 	camera.ball_node = ball
 	camera.player1_node = player1
 	camera.player2_node = player2
+	camera.tracked_players.assign(players)
 	camera.current = true
 	add_child(camera)
 

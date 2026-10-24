@@ -7,30 +7,76 @@ const CageConfig = preload("res://scripts/config.gd")
 @export var player1_node: Node3D = null
 @export var player2_node: Node3D = null
 
-func _ready() -> void:
-	fov = 76.0
+@export var tracked_players: Array[Node3D] = []
+
+var _current_look_target: Vector3 = Vector3(0.0, 0.6, 0.0)
+
+func _init() -> void:
+	fov = 82.0
 	near = 0.05
+	_current_look_target = Vector3(0.0, 0.6, 0.0)
+
+func _ready() -> void:
+	fov = 82.0
+	near = 0.05
+	_current_look_target = Vector3(0.0, 0.6, 0.0)
 
 func _process(delta: float) -> void:
 	update_camera(delta)
 
 func update_camera(delta: float) -> void:
-	var target_x: float = 0.0
-	var target_z: float = 0.0
+	var action_pos = Vector3.ZERO
+	var weight_total = 0.0
 	
+	# 1. Hauptfokus: Ball
 	if is_instance_valid(ball_node):
 		var bpos = ball_node.global_position if (is_inside_tree() and ball_node.is_inside_tree()) else ball_node.position
-		target_x = clampf(bpos.x * 0.35, -CageConfig.CAGE_WIDTH_X * 0.22, CageConfig.CAGE_WIDTH_X * 0.22)
-		target_z = clampf(bpos.z * 0.2, -1.2, 0.8)
+		action_pos += bpos * 3.0
+		weight_total += 3.0
 	
-	# Strikt innerhalb der Käfig-Grenzen (-12..12, 0..7, -7..7)
-	var cam_x = clampf(target_x, -5.5, 5.5)
-	var cam_y = clampf(CageConfig.CAMERA_HEIGHT, 2.5, CageConfig.CAGE_HEIGHT_Y - 1.8)
-	var cam_z = clampf(CageConfig.CAMERA_OFFSET_Z + target_z, 3.8, CageConfig.CAGE_DEPTH_Z * 0.5 - 1.2)
+	# 2. Spielgeschehen: Aktive Spieler um den Ball
+	var candidates: Array[Node3D] = []
+	if not tracked_players.is_empty():
+		candidates = tracked_players
+	else:
+		if is_instance_valid(player1_node):
+			candidates.append(player1_node)
+		if is_instance_valid(player2_node):
+			candidates.append(player2_node)
+	
+	var players_mid = Vector3.ZERO
+	var active_count = 0
+	for p in candidates:
+		if is_instance_valid(p) and ("control_type" not in p or p.control_type != 0):
+			var ppos = p.global_position if (is_inside_tree() and p.is_inside_tree()) else p.position
+			players_mid += ppos
+			active_count += 1
+	
+	if active_count > 0:
+		players_mid /= float(active_count)
+		action_pos += players_mid * 1.0
+		weight_total += 1.0
+	
+	if weight_total > 0.0:
+		action_pos /= weight_total
+	
+	# 3. Positionierung: Mehr Distanz, dynamisches Mitziehen entlang X
+	var cam_x = clampf(action_pos.x * 0.70, -CageConfig.CAGE_WIDTH_X * 0.35, CageConfig.CAGE_WIDTH_X * 0.35)
+	var cam_y = clampf(CageConfig.CAMERA_HEIGHT + action_pos.y * 0.20, 4.2, CageConfig.CAGE_HEIGHT_Y - 1.2)
+	var cam_z = clampf(CageConfig.CAMERA_OFFSET_Z + action_pos.z * 0.15, 5.0, CageConfig.CAGE_DEPTH_Z * 0.5 - 0.8)
 	var desired_pos = Vector3(cam_x, cam_y, cam_z)
+	
+	# 4. Blickpunkt folgt dem Spielgeschehen
+	var target_look = Vector3(
+		action_pos.x * 0.85,
+		clampf(action_pos.y * 0.5 + 0.4, 0.4, 2.0),
+		action_pos.z * 0.60
+	)
 	
 	if is_inside_tree():
 		global_position = global_position.lerp(desired_pos, delta * CageConfig.CAMERA_LERP_SPEED)
-		look_at(Vector3(target_x * 0.65, 0.7, target_z * 0.35), Vector3.UP)
+		_current_look_target = _current_look_target.lerp(target_look, delta * (CageConfig.CAMERA_LERP_SPEED + 1.5))
+		look_at(_current_look_target, Vector3.UP)
 	else:
 		position = position.lerp(desired_pos, delta * CageConfig.CAMERA_LERP_SPEED)
+		_current_look_target = target_look
