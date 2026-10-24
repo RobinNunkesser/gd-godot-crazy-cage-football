@@ -49,6 +49,13 @@ func _build_scene() -> void:
 	# 2. Boden (Stahl-Riffelblech Look)
 	var floor_body = StaticBody3D.new()
 	floor_body.name = "CageFloor"
+	floor_body.position = Vector3(0, -0.2, 0)
+	
+	var floor_phys = PhysicsMaterial.new()
+	floor_phys.friction = 0.5
+	floor_phys.bounce = 0.6
+	floor_body.physics_material_override = floor_phys
+	
 	var floor_col = CollisionShape3D.new()
 	var floor_box = BoxMesh.new()
 	floor_box.size = Vector3(CageConfig.CAGE_WIDTH_X + 4.0, 0.4, CageConfig.CAGE_DEPTH_Z + 4.0)

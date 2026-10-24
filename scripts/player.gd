@@ -11,16 +11,37 @@ var target_ball: Node3D = null
 
 var _eyes_pivot: Node3D
 var _mesh_instance: MeshInstance3D
+var _pending_teleport: bool = false
+var _teleport_target: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	mass = CageConfig.PLAYER_MASS
+	linear_damp = 1.0
+	angular_damp = 1.0
 	
 	var phys_mat = PhysicsMaterial.new()
 	phys_mat.bounce = CageConfig.PLAYER_BOUNCE
 	phys_mat.friction = CageConfig.PLAYER_FRICTION
 	physics_material_override = phys_mat
 	
+	_setup_collision()
 	_setup_visuals()
+
+func _setup_collision() -> void:
+	if not has_node("CollisionShape3D"):
+		var col = CollisionShape3D.new()
+		col.name = "CollisionShape3D"
+		var sphere = SphereShape3D.new()
+		sphere.radius = CageConfig.PLAYER_RADIUS
+		col.shape = sphere
+		add_child(col)
+
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	if _pending_teleport:
+		state.transform.origin = _teleport_target
+		state.linear_velocity = Vector3.ZERO
+		state.angular_velocity = Vector3.ZERO
+		_pending_teleport = false
 
 func _setup_visuals() -> void:
 	if not has_node("SphereMesh"):
@@ -131,7 +152,9 @@ func _update_eyes() -> void:
 		_eyes_pivot.look_at(target_pos, Vector3.UP)
 
 func reset_to(pos: Vector3) -> void:
+	_teleport_target = pos
 	if is_inside_tree():
+		_pending_teleport = true
 		global_position = pos
 	else:
 		position = pos

@@ -4,6 +4,8 @@ extends RigidBody3D
 const CageConfig = preload("res://scripts/config.gd")
 
 var _mesh_instance: MeshInstance3D
+var _pending_teleport: bool = false
+var _teleport_target: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	mass = CageConfig.BALL_MASS
@@ -18,7 +20,24 @@ func _ready() -> void:
 	contact_monitor = true
 	max_contacts_reported = 4
 	
+	_setup_collision()
 	_setup_visuals()
+
+func _setup_collision() -> void:
+	if not has_node("CollisionShape3D"):
+		var col = CollisionShape3D.new()
+		col.name = "CollisionShape3D"
+		var sphere = SphereShape3D.new()
+		sphere.radius = CageConfig.BALL_RADIUS
+		col.shape = sphere
+		add_child(col)
+
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	if _pending_teleport:
+		state.transform.origin = _teleport_target
+		state.linear_velocity = Vector3.ZERO
+		state.angular_velocity = Vector3.ZERO
+		_pending_teleport = false
 
 func _setup_visuals() -> void:
 	if not has_node("BallMesh"):
@@ -36,9 +55,11 @@ func _setup_visuals() -> void:
 		add_child(_mesh_instance)
 
 func reset_to_center() -> void:
+	_teleport_target = Vector3(0.0, CageConfig.BALL_RADIUS + 0.1, 0.0)
 	if is_inside_tree():
-		global_position = Vector3(0.0, CageConfig.BALL_RADIUS + 0.1, 0.0)
+		_pending_teleport = true
+		global_position = _teleport_target
 	else:
-		position = Vector3(0.0, CageConfig.BALL_RADIUS + 0.1, 0.0)
+		position = _teleport_target
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO

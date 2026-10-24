@@ -74,6 +74,10 @@ func _test_player_jump() -> bool:
 	player._ready()
 	
 	assert(player.mass == CageConfig.PLAYER_MASS, "Player mass mismatch")
+	assert(player.has_node("CollisionShape3D"), "CagePlayer MUST have CollisionShape3D")
+	var p_col = player.get_node("CollisionShape3D") as CollisionShape3D
+	assert(p_col != null and p_col.shape is SphereShape3D, "CagePlayer collision shape must be SphereShape3D")
+	assert(is_equal_approx(p_col.shape.radius, CageConfig.PLAYER_RADIUS), "Player collision radius mismatch")
 	
 	# Spieler am Boden -> Sprung sollte Impuls auslösen
 	player.position = Vector3(0, CageConfig.PLAYER_RADIUS, 0)
@@ -92,6 +96,10 @@ func _test_ball_physics() -> bool:
 	
 	assert(is_equal_approx(ball.mass, CageConfig.BALL_MASS), "Ball mass mismatch")
 	assert(is_equal_approx(ball.physics_material_override.bounce, CageConfig.BALL_BOUNCE), "Ball bounce mismatch")
+	assert(ball.has_node("CollisionShape3D"), "SoccerBall MUST have CollisionShape3D")
+	var b_col = ball.get_node("CollisionShape3D") as CollisionShape3D
+	assert(b_col != null and b_col.shape is SphereShape3D, "SoccerBall collision shape must be SphereShape3D")
+	assert(is_equal_approx(b_col.shape.radius, CageConfig.BALL_RADIUS), "SoccerBall collision radius mismatch")
 	
 	ball.reset_to_center()
 	assert(ball.position.x == 0.0 and ball.position.z == 0.0, "Ball should be centered")
