@@ -87,13 +87,17 @@ func _test_player_jump() -> bool:
 	player.trigger_jump()
 	assert(player.linear_velocity.y >= 0.0, "Jump should impart upward velocity or force")
 	
-	# Bot AI Steering testen
+	# Bot AI Steering & Stuck Recovery testen
 	player.is_bot = true
 	var test_ball = Node3D.new()
-	test_ball.position = Vector3(2.0, 0.5, 0.0)
+	test_ball.position = Vector3(1.0, 0.5, 0.0)
 	root.add_child(test_ball)
 	player.target_ball = test_ball
-	player._handle_bot_ai(0.016)
+	player.linear_velocity = Vector3.ZERO
+	# 40 Ticks simuliert 0.6s Stillstand am Ball -> löst Unstuck-Modus aus
+	for _t in range(40):
+		player._handle_bot_ai(0.016)
+	assert(player._unstuck_mode_timer > 0.0 or player.linear_velocity.length() > 0.1, "Bot should engage unstuck recovery when stalled at ball")
 	test_ball.queue_free()
 	
 	player.queue_free()
@@ -163,6 +167,12 @@ func _test_main_scene() -> bool:
 	assert(main_scene.has_node("RightGoal_BackNet"), "Right goal back wall must exist")
 	assert(main_scene.has_node("LeftGoal_RoofNet"), "Left goal roof must exist")
 	assert(main_scene.has_node("RightGoal_RoofNet"), "Right goal roof must exist")
+	
+	# 45-Grad Eckbanden müssen existieren
+	assert(main_scene.has_node("CornerBumper_NE"), "NE corner bumper must exist")
+	assert(main_scene.has_node("CornerBumper_SE"), "SE corner bumper must exist")
+	assert(main_scene.has_node("CornerBumper_NW"), "NW corner bumper must exist")
+	assert(main_scene.has_node("CornerBumper_SW"), "SW corner bumper must exist")
 	
 	# Bot Toggle testen
 	main_scene.toggle_p2_bot()

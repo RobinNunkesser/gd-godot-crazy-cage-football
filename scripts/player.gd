@@ -33,6 +33,9 @@ var _eyes_pivot: Node3D
 var _mesh_instance: MeshInstance3D
 var _pending_teleport: bool = false
 var _teleport_target: Vector3 = Vector3.ZERO
+var _stuck_timer: float = 0.0
+var _unstuck_mode_timer: float = 0.0
+var _unstuck_dir: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	mass = CageConfig.PLAYER_MASS
@@ -127,21 +130,66 @@ func _physics_process(delta: float) -> void:
 	_clamp_speed()
 	_update_eyes()
 
-func _handle_bot_ai(_delta: float) -> void:
+func _handle_bot_ai(delta: float) -> void:
 	if not is_instance_valid(target_ball):
 		return
 	
 	var my_pos = global_position if is_inside_tree() else position
 	var ball_pos = target_ball.global_position if (is_inside_tree() and target_ball.is_inside_tree()) else target_ball.position
+	var dist_to_ball = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).length()
 	
+	# 1. Klemmen- & Ecken-Erkennung: Nahe am Ball, aber blockiert (< 1.0 m/s)
+	if dist_to_ball < 2.0 and linear_velocity.length() < 1.0:
+		_stuck_timer += delta
+		if _stuck_timer > 0.45:
+			# Befreiungsschlag: Sofortiger Zıplama-Sprung + Entlastungsstoß in den freien Raum
+			trigger_jump()
+			_unstuck_mode_timer = 0.75
+			var to_center = Vector3(-signf(my_pos.x) * 0.8, 0.0, -signf(my_pos.z) * 1.4).normalized()
+			_unstuck_dir = to_center
+			if boost_cooldown <= 0.0:
+				trigger_boost(Vector2(_unstuck_dir.x, _unstuck_dir.z))
+			_stuck_timer = 0.0
+	else:
+		_stuck_timer = maxf(0.0, _stuck_timer - delta * 0.5)
+	
+	# 2. Wenn aktiver Unstuck-Modus läuft:
+	if _unstuck_mode_timer > 0.0:
+		_unstuck_mode_timer -= delta
+		apply_central_force(_unstuck_dir * CageConfig.PLAYER_DRIVE_FORCE * bot_difficulty * 1.5)
+		if _unstuck_mode_timer < 0.35 and dist_to_ball < 1.6 and my_pos.y <= CageConfig.PLAYER_RADIUS + 0.35:
+			trigger_jump()
+		return
+	
+	# 3. Flanken- und Ecken-Taktik (Corner Clearance)
 	# Ziel-Tor: Team 1 (Rot) greift nach rechts (X > 0) an; Team 2 (Blau) greift nach links (X < 0) an.
 	var goal_x = CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else -CageConfig.CAGE_WIDTH_X * 0.5
 	var to_goal = Vector2(goal_x - ball_pos.x, 0.0).normalized()
 	
-	# Positioniere dich leicht hinter den Ball bezogen auf das Ziel-Tor
-	var attack_spot = Vector2(ball_pos.x - to_goal.x * 0.8, ball_pos.z)
+	var desired_push_dir = to_goal
+	var is_in_corner_or_flank = absf(ball_pos.z) > 3.8 or (absf(ball_pos.x) > CageConfig.CAGE_WIDTH_X * 0.5 - 3.2 and absf(ball_pos.z) > 2.2)
+	
+	if is_in_corner_or_flank:
+		# In der Ecke / an der Bande nicht ins Aus drücken, sondern Ball quer zur Spielfeldmitte (Z=0) herausspielen!
+		var center_z_dir = -signf(ball_pos.z)
+		desired_push_dir = Vector2(to_goal.x * 0.5, center_z_dir * 1.0).normalized()
+	
+	# Positioniere dich hinter den Ball bezogen auf die gewünschte Stoßrichtung
+	var attack_spot = Vector2(ball_pos.x, ball_pos.z) - desired_push_dir * 0.95
+	
+	# Grenze den Attack-Spot so ein, dass der Bot nicht versucht in/durch Wände zu fahren
+	attack_spot.x = clampf(attack_spot.x, -CageConfig.CAGE_WIDTH_X * 0.5 + 1.2, CageConfig.CAGE_WIDTH_X * 0.5 - 1.2)
+	attack_spot.y = clampf(attack_spot.y, -CageConfig.CAGE_DEPTH_Z * 0.5 + 1.2, CageConfig.CAGE_DEPTH_Z * 0.5 - 1.2)
+	
 	var steer_vec = attack_spot - Vector2(my_pos.x, my_pos.z)
-	var dist_to_ball = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).length()
+	
+	# Wenn der Bot zwischen Ball und Bande steht und den Ball fälschlicherweise in die Ecke klemmen würde:
+	var to_ball_vec = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).normalized()
+	if dist_to_ball < 1.6 and to_ball_vec.dot(desired_push_dir) < -0.2:
+		# Springe über/auf den Ball oder weiche leicht seitlich aus
+		if my_pos.y <= CageConfig.PLAYER_RADIUS + 0.35:
+			trigger_jump()
+		steer_vec += Vector2(desired_push_dir.y, -desired_push_dir.x) * 1.5
 	
 	if steer_vec.length_squared() > 0.01:
 		steer_vec = steer_vec.normalized()
@@ -149,13 +197,13 @@ func _handle_bot_ai(_delta: float) -> void:
 		apply_central_force(move_dir * CageConfig.PLAYER_DRIVE_FORCE * bot_difficulty)
 	
 	# Zıplama Sprung bei hoher Kugel in Tor-Nähe
-	if dist_to_ball < 2.2 and ball_pos.y > 1.0:
+	if dist_to_ball < 2.2 and ball_pos.y > 0.9:
 		trigger_jump()
 	
 	# Boost / Rammstoß wenn Ball im Schussfeld liegt
 	if dist_to_ball < 2.5 and boost_cooldown <= 0.0:
 		var dir_to_ball = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).normalized()
-		if dir_to_ball.dot(to_goal) > 0.6:
+		if dir_to_ball.dot(desired_push_dir) > 0.5:
 			trigger_boost(dir_to_ball)
 
 func _handle_input(_delta: float) -> void:
@@ -263,3 +311,6 @@ func reset_to(pos: Vector3) -> void:
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	boost_cooldown = 0.0
+	_stuck_timer = 0.0
+	_unstuck_mode_timer = 0.0
+	_unstuck_dir = Vector3.ZERO

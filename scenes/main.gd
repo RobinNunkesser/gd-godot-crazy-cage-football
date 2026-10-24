@@ -99,6 +99,9 @@ func _build_scene() -> void:
 	_build_side_wall(-1, "LeftWall")
 	_build_side_wall(1, "RightWall")
 	
+	# 45-Grad abgewinkelte Eck-Banden (verhindern Verklemmen in 90-Grad Ecken)
+	_build_corner_bumpers()
+	
 	# 4. Tore mit Area3D
 	_build_goal(-1, 2) # Tor links (Team 2 verteidigt, Team 1 punktet)
 	_build_goal(1, 1)  # Tor rechts (Team 1 verteidigt, Team 2 punktet)
@@ -260,6 +263,49 @@ func _build_goal_posts(side: int) -> void:
 	crossbar.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT, 0)
 	crossbar.rotation_degrees = Vector3(90, 0, 0)
 	add_child(crossbar)
+
+func _build_corner_bumpers() -> void:
+	var chamfer_len = 2.6
+	var box_size = Vector3(chamfer_len, CageConfig.CAGE_HEIGHT_Y, CageConfig.WALL_THICKNESS * 1.5)
+	var bumper_color = Color(0.75, 0.65, 0.25, 0.6) # Industrieller Warnbanden-Look
+	
+	var corner_configs = [
+		{"name": "CornerBumper_NE", "pos": Vector3(11.1, CageConfig.CAGE_HEIGHT_Y * 0.5, -6.1), "rot": -45.0},
+		{"name": "CornerBumper_SE", "pos": Vector3(11.1, CageConfig.CAGE_HEIGHT_Y * 0.5, 6.1), "rot": 45.0},
+		{"name": "CornerBumper_NW", "pos": Vector3(-11.1, CageConfig.CAGE_HEIGHT_Y * 0.5, -6.1), "rot": 45.0},
+		{"name": "CornerBumper_SW", "pos": Vector3(-11.1, CageConfig.CAGE_HEIGHT_Y * 0.5, 6.1), "rot": -45.0}
+	]
+	
+	for cfg in corner_configs:
+		var body = StaticBody3D.new()
+		body.name = cfg["name"]
+		body.position = cfg["pos"]
+		body.rotation_degrees = Vector3(0, cfg["rot"], 0)
+		
+		var phys_mat = PhysicsMaterial.new()
+		phys_mat.bounce = 0.85 # Hohe Federwirkung für dynamisches Herausprallen
+		phys_mat.friction = 0.2
+		body.physics_material_override = phys_mat
+		
+		var col = CollisionShape3D.new()
+		var shape = BoxShape3D.new()
+		shape.size = box_size
+		col.shape = shape
+		body.add_child(col)
+		
+		var mesh_inst = MeshInstance3D.new()
+		var box = BoxMesh.new()
+		box.size = box_size
+		mesh_inst.mesh = box
+		var mat = StandardMaterial3D.new()
+		mat.albedo_color = bumper_color
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.metallic = 0.7
+		mat.roughness = 0.2
+		mesh_inst.material_override = mat
+		body.add_child(mesh_inst)
+		
+		add_child(body)
 
 func _build_ui() -> void:
 	var canvas = CanvasLayer.new()
