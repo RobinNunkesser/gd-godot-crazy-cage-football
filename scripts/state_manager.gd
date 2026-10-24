@@ -28,13 +28,17 @@ var celebration_timer: float = 0.0
 var warmup_timer: float = 3.0
 var scores: Dictionary = {1: 0, 2: 0} # Team 1 = Rot (links), Team 2 = Blau (rechts)
 
+var last_scoring_team: int = 0
+
 func enter_lobby() -> void:
 	scores = {1: 0, 2: 0}
+	last_scoring_team = 0
 	current_state = MatchState.LOBBY
 	state_changed.emit(current_state)
 
 func start_match(duration: float = CageConfig.MATCH_DURATION_SECONDS) -> void:
 	scores = {1: 0, 2: 0}
+	last_scoring_team = 0
 	time_remaining = duration
 	celebration_timer = 0.0
 	warmup_timer = 3.0
@@ -48,7 +52,7 @@ func reset_match(duration: float = CageConfig.MATCH_DURATION_SECONDS) -> void:
 	start_match(duration)
 
 func start_play() -> void:
-	if current_state == MatchState.KICKOFF or current_state == MatchState.WARMUP:
+	if current_state == MatchState.KICKOFF or current_state == MatchState.WARMUP or current_state == MatchState.RESET:
 		current_state = MatchState.PLAYING
 		state_changed.emit(current_state)
 
@@ -77,7 +81,12 @@ func update_logic(delta: float) -> void:
 				current_state = MatchState.RESET
 				state_changed.emit(current_state)
 		MatchState.RESET:
-			current_state = MatchState.KICKOFF
+			warmup_timer = CageConfig.KICKOFF_DELAY
+			current_state = MatchState.WARMUP
+			state_changed.emit(current_state)
+		MatchState.KICKOFF:
+			warmup_timer = CageConfig.KICKOFF_DELAY
+			current_state = MatchState.WARMUP
 			state_changed.emit(current_state)
 		MatchState.MATCH_OVER:
 			pass
@@ -86,6 +95,7 @@ func trigger_goal(scoring_team: int) -> void:
 	if current_state != MatchState.PLAYING:
 		return
 	
+	last_scoring_team = scoring_team
 	if scores.has(scoring_team):
 		scores[scoring_team] += 1
 		score_updated.emit(scoring_team, scores[scoring_team])

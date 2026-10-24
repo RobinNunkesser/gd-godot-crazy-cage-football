@@ -39,6 +39,11 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		state.angular_velocity = Vector3.ZERO
 		_pending_teleport = false
 
+func _physics_process(_delta: float) -> void:
+	var cur_pos = global_position if is_inside_tree() else position
+	if cur_pos.y < -0.8 or absf(cur_pos.x) > (CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH + 1.5) or absf(cur_pos.z) > (CageConfig.CAGE_DEPTH_Z * 0.5 + 1.5):
+		reset_to_center()
+
 func _setup_visuals() -> void:
 	if not has_node("BallMesh"):
 		_mesh_instance = MeshInstance3D.new()

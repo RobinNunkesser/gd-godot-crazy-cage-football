@@ -110,6 +110,13 @@ func _setup_visuals() -> void:
 			eye.add_child(pupil)
 
 func _physics_process(delta: float) -> void:
+	# Sicherheits-Recovery falls Spieler aus dem Spielfeld fällt
+	var cur_pos = global_position if is_inside_tree() else position
+	if cur_pos.y < -0.8 or absf(cur_pos.x) > (CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH + 1.5) or absf(cur_pos.z) > (CageConfig.CAGE_DEPTH_Z * 0.5 + 1.5):
+		var safe_x = -4.0 if team_id == 1 else 4.0
+		reset_to(Vector3(safe_x, CageConfig.PLAYER_RADIUS, 0.0))
+		return
+
 	if boost_cooldown > 0.0:
 		boost_cooldown -= delta
 	

@@ -76,7 +76,7 @@ func _build_scene() -> void:
 	
 	var floor_col = CollisionShape3D.new()
 	var floor_box = BoxMesh.new()
-	floor_box.size = Vector3(CageConfig.CAGE_WIDTH_X + 4.0, 0.4, CageConfig.CAGE_DEPTH_Z + 4.0)
+	floor_box.size = Vector3(CageConfig.CAGE_WIDTH_X + CageConfig.GOAL_DEPTH * 2.0 + 4.0, 0.4, CageConfig.CAGE_DEPTH_Z + 4.0)
 	floor_col.shape = BoxShape3D.new()
 	floor_col.shape.size = floor_box.size
 	floor_body.add_child(floor_col)
@@ -145,7 +145,7 @@ func _build_scene() -> void:
 	camera.current = true
 	add_child(camera)
 
-func _build_wall(pos: Vector3, size: Vector3, wall_name: String) -> void:
+func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: Color = Color(0.4, 0.45, 0.5, 0.6)) -> void:
 	var body = StaticBody3D.new()
 	body.name = wall_name
 	body.position = pos
@@ -161,7 +161,7 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String) -> void:
 	box.size = size
 	mesh_inst.mesh = box
 	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(0.4, 0.45, 0.5, 0.6)
+	mat.albedo_color = custom_color
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.roughness = 0.3
 	mesh_inst.material_override = mat
@@ -179,15 +179,33 @@ func _build_side_wall(side: int, wall_name: String) -> void:
 	_build_wall(Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, z_offset), Vector3(CageConfig.WALL_THICKNESS, CageConfig.GOAL_HEIGHT, wing_z), wall_name + "_WingSouth")
 
 func _build_goal(side: int, scoring_team: int) -> void:
-	var x_pos = side * (CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH * 0.5)
+	var goal_center_x = side * (CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH * 0.5)
+	var goal_back_x = side * (CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH + CageConfig.WALL_THICKNESS * 0.5)
+	var prefix = "LeftGoal" if side < 0 else "RightGoal"
+	var net_color = Color(0.2, 0.45, 0.85, 0.5) if side < 0 else Color(0.85, 0.25, 0.2, 0.5)
 	
+	# 1. Solide Rückwand des Tors (StaticBody3D verhindert Herausfallen!)
+	_build_wall(Vector3(goal_back_x, CageConfig.GOAL_HEIGHT * 0.5, 0), Vector3(CageConfig.WALL_THICKNESS, CageConfig.GOAL_HEIGHT, CageConfig.GOAL_WIDTH + CageConfig.WALL_THICKNESS * 2.0), prefix + "_BackNet", net_color)
+	
+	# 2. Solide Seitenwände des Tors (Nord & Süd)
+	var z_offset = (CageConfig.GOAL_WIDTH + CageConfig.WALL_THICKNESS) * 0.5
+	_build_wall(Vector3(goal_center_x, CageConfig.GOAL_HEIGHT * 0.5, -z_offset), Vector3(CageConfig.GOAL_DEPTH, CageConfig.GOAL_HEIGHT, CageConfig.WALL_THICKNESS), prefix + "_SideNetNorth", net_color)
+	_build_wall(Vector3(goal_center_x, CageConfig.GOAL_HEIGHT * 0.5, z_offset), Vector3(CageConfig.GOAL_DEPTH, CageConfig.GOAL_HEIGHT, CageConfig.WALL_THICKNESS), prefix + "_SideNetSouth", net_color)
+	
+	# 3. Solides Tordach
+	_build_wall(Vector3(goal_center_x, CageConfig.GOAL_HEIGHT + CageConfig.WALL_THICKNESS * 0.5, 0), Vector3(CageConfig.GOAL_DEPTH, CageConfig.WALL_THICKNESS, CageConfig.GOAL_WIDTH + CageConfig.WALL_THICKNESS * 2.0), prefix + "_RoofNet", net_color)
+	
+	# 4. Optische Torpfosten & Querlatte
+	_build_goal_posts(side)
+	
+	# 5. Torbereich Trigger Area
 	var area = Area3D.new()
 	area.name = "GoalArea_Team%d" % scoring_team
-	area.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, 0)
+	area.position = Vector3(goal_center_x, CageConfig.GOAL_HEIGHT * 0.5, 0)
 	
 	var col = CollisionShape3D.new()
 	var shape = BoxShape3D.new()
-	shape.size = Vector3(CageConfig.GOAL_DEPTH, CageConfig.GOAL_HEIGHT, CageConfig.GOAL_WIDTH)
+	shape.size = Vector3(CageConfig.GOAL_DEPTH * 0.9, CageConfig.GOAL_HEIGHT * 0.9, CageConfig.GOAL_WIDTH * 0.9)
 	col.shape = shape
 	area.add_child(col)
 	
@@ -198,6 +216,49 @@ func _build_goal(side: int, scoring_team: int) -> void:
 			state_manager.trigger_goal(scoring_team)
 	)
 	add_child(area)
+
+func _build_goal_posts(side: int) -> void:
+	var post_mat = StandardMaterial3D.new()
+	post_mat.albedo_color = Color(0.95, 0.95, 0.95)
+	post_mat.roughness = 0.2
+	post_mat.metallic = 0.8
+	
+	var x_pos = side * CageConfig.CAGE_WIDTH_X * 0.5
+	var post_radius = 0.08
+	
+	# Nord-Pfosten
+	var post_n = MeshInstance3D.new()
+	var cyl_n = CylinderMesh.new()
+	cyl_n.top_radius = post_radius
+	cyl_n.bottom_radius = post_radius
+	cyl_n.height = CageConfig.GOAL_HEIGHT
+	post_n.mesh = cyl_n
+	post_n.material_override = post_mat
+	post_n.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, -CageConfig.GOAL_WIDTH * 0.5)
+	add_child(post_n)
+	
+	# Süd-Pfosten
+	var post_s = MeshInstance3D.new()
+	var cyl_s = CylinderMesh.new()
+	cyl_s.top_radius = post_radius
+	cyl_s.bottom_radius = post_radius
+	cyl_s.height = CageConfig.GOAL_HEIGHT
+	post_s.mesh = cyl_s
+	post_s.material_override = post_mat
+	post_s.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, CageConfig.GOAL_WIDTH * 0.5)
+	add_child(post_s)
+	
+	# Querlatte
+	var crossbar = MeshInstance3D.new()
+	var cyl_c = CylinderMesh.new()
+	cyl_c.top_radius = post_radius
+	cyl_c.bottom_radius = post_radius
+	cyl_c.height = CageConfig.GOAL_WIDTH
+	crossbar.mesh = cyl_c
+	crossbar.material_override = post_mat
+	crossbar.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT, 0)
+	crossbar.rotation_degrees = Vector3(90, 0, 0)
+	add_child(crossbar)
 
 func _build_ui() -> void:
 	var canvas = CanvasLayer.new()
@@ -504,7 +565,14 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 				ball.freeze = false
 		CageStateManager.MatchState.GOAL_SCORED, CageStateManager.MatchState.CELEBRATION:
 			ui_banner_label.visible = true
-			ui_banner_label.text = "⚽ GOOOOAL! ⚽"
+			if state_manager.last_scoring_team == 1:
+				ui_banner_label.text = "⚽ GOOOOAL TEAM RED! ⚽"
+			elif state_manager.last_scoring_team == 2:
+				ui_banner_label.text = "⚽ GOOOOAL TEAM BLUE! ⚽"
+			else:
+				ui_banner_label.text = "⚽ GOOOOAL! ⚽"
+			if ball:
+				ball.linear_velocity *= 0.2
 		CageStateManager.MatchState.RESET:
 			reset_positions()
 		CageStateManager.MatchState.MATCH_OVER:

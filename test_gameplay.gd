@@ -58,8 +58,11 @@ func _test_state_manager() -> bool:
 	sm.update_logic(0.01)
 	assert(sm.current_state == CageStateManager.MatchState.KICKOFF or sm.current_state == CageStateManager.MatchState.WARMUP, "State should return to KICKOFF/WARMUP after reset")
 	
+	# Automatischer Übergang von Warmup nach Kickoff zurück zu PLAYING
+	sm.update_logic(CageConfig.KICKOFF_DELAY + 0.1)
+	assert(sm.current_state == CageStateManager.MatchState.PLAYING, "State should resume to PLAYING automatically after goal warmup")
+	
 	# Match-Ende testen
-	sm.start_play()
 	sm.update_logic(10.0)
 	assert(sm.current_state == CageStateManager.MatchState.MATCH_OVER, "State should be MATCH_OVER")
 	assert(sm.get_winner() == 1, "Team 1 should be the winner")
@@ -127,6 +130,8 @@ func _test_cage_camera() -> bool:
 	
 	cam.update_camera(0.1)
 	assert(cam.position.y > 0.0, "Camera should have elevated height")
+	assert(cam.position.y < CageConfig.CAGE_HEIGHT_Y, "Camera MUST be inside cage vertically (< CAGE_HEIGHT_Y)")
+	assert(cam.position.z < CageConfig.CAGE_DEPTH_Z * 0.5, "Camera MUST be inside cage depth (< CAGE_DEPTH_Z / 2)")
 	
 	cam.queue_free()
 	test_ball.queue_free()
@@ -144,6 +149,12 @@ func _test_main_scene() -> bool:
 	assert(main_scene.ball != null, "Soccer ball should exist")
 	assert(main_scene.camera != null, "Cage camera should exist")
 	assert(main_scene.player2.is_bot, "Player 2 should default to AI bot for single-player")
+	
+	# Tore müssen durch feste StaticBody3D-Wände geschlossen sein
+	assert(main_scene.has_node("LeftGoal_BackNet"), "Left goal back wall must exist")
+	assert(main_scene.has_node("RightGoal_BackNet"), "Right goal back wall must exist")
+	assert(main_scene.has_node("LeftGoal_RoofNet"), "Left goal roof must exist")
+	assert(main_scene.has_node("RightGoal_RoofNet"), "Right goal roof must exist")
 	
 	# Bot Toggle testen
 	main_scene.toggle_p2_bot()
