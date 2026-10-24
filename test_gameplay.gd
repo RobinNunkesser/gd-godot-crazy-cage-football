@@ -6,12 +6,14 @@ const CagePlayer = preload("res://scripts/player.gd")
 const SoccerBall = preload("res://scripts/ball.gd")
 const CageCamera = preload("res://scripts/cage_camera.gd")
 const MainCageFootball = preload("res://scenes/main.gd")
+const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 
 func _init() -> void:
 	print("\n--- Running Headless Godot 4 Unit & Gameplay Tests for Crazy Cage Football ---")
 	var success = true
 	
 	success = success and _test_config()
+	success = success and _test_sound_manager()
 	success = success and _test_state_manager()
 	success = success and _test_player_jump()
 	success = success and _test_ball_physics()
@@ -26,7 +28,7 @@ func _init() -> void:
 		quit(1)
 
 func _test_config() -> bool:
-	print("[1/6] Testing CageConfig parameters...")
+	print("[1/7] Testing CageConfig parameters...")
 	assert(CageConfig.CAGE_WIDTH_X >= 15.0, "Cage width must be >= 15m")
 	assert(CageConfig.CAGE_HEIGHT_Y >= 5.0, "Cage height must be >= 5m")
 	assert(CageConfig.PLAYER_RADIUS > 0.0, "Player radius must be positive")
@@ -35,8 +37,33 @@ func _test_config() -> bool:
 	print("  -> CageConfig OK.")
 	return true
 
+func _test_sound_manager() -> bool:
+	print("[2/7] Testing CageSoundManager procedural synthesis & audio pool...")
+	var sm = CageSoundManager.new()
+	assert(sm.stream_kick != null, "Kick audio stream must be generated")
+	assert(sm.stream_wall != null, "Wall audio stream must be generated")
+	assert(sm.stream_post != null, "Post audio stream must be generated")
+	assert(sm.stream_whistle != null, "Whistle audio stream must be generated")
+	assert(sm.stream_goal != null, "Goal audio stream must be generated")
+	assert(sm.stream_jump != null, "Jump audio stream must be generated")
+	assert(sm.stream_boost != null, "Boost audio stream must be generated")
+	assert(sm.stream_tackle != null, "Tackle audio stream must be generated")
+	
+	# Test playback guards outside tree
+	sm.play_kick(4.0)
+	sm.play_wall(3.0)
+	sm.play_post()
+	sm.play_whistle()
+	sm.play_goal()
+	sm.play_jump()
+	sm.play_boost()
+	sm.play_tackle(2.0)
+	sm.free()
+	print("  -> CageSoundManager OK.")
+	return true
+
 func _test_state_manager() -> bool:
-	print("[2/6] Testing CageStateManager...")
+	print("[3/7] Testing CageStateManager...")
 	var sm = CageStateManager.new()
 	sm.reset_match(10.0)
 	assert(sm.current_state == CageStateManager.MatchState.WARMUP or sm.current_state == CageStateManager.MatchState.KICKOFF, "Initial state should be WARMUP or KICKOFF")
@@ -70,7 +97,7 @@ func _test_state_manager() -> bool:
 	return true
 
 func _test_player_jump() -> bool:
-	print("[3/6] Testing CagePlayer kinematics & Ziplama jump...")
+	print("[4/7] Testing CagePlayer kinematics & Ziplama jump...")
 	var player = CagePlayer.new()
 	player.player_id = 1
 	root.add_child(player)
@@ -105,7 +132,7 @@ func _test_player_jump() -> bool:
 	return true
 
 func _test_ball_physics() -> bool:
-	print("[4/6] Testing SoccerBall physics & bounce...")
+	print("[5/7] Testing SoccerBall physics & bounce...")
 	var ball = SoccerBall.new()
 	root.add_child(ball)
 	ball._ready()
@@ -125,7 +152,7 @@ func _test_ball_physics() -> bool:
 	return true
 
 func _test_cage_camera() -> bool:
-	print("[5/6] Testing CageCamera dynamic tracking...")
+	print("[6/7] Testing CageCamera dynamic tracking...")
 	var cam = CageCamera.new()
 	var test_ball = Node3D.new()
 	test_ball.position = Vector3(4.0, 1.0, 2.0)
@@ -151,7 +178,7 @@ func _test_cage_camera() -> bool:
 	return true
 
 func _test_main_scene() -> bool:
-	print("[6/6] Testing MainCageFootball full orchestration...")
+	print("[7/7] Testing MainCageFootball full orchestration...")
 	var main_scene = MainCageFootball.new()
 	root.add_child(main_scene)
 	main_scene._ready()

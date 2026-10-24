@@ -2,6 +2,7 @@ class_name SoccerBall
 extends RigidBody3D
 
 const CageConfig = preload("res://scripts/config.gd")
+const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 
 var _mesh_instance: MeshInstance3D
 var _pending_teleport: bool = false
@@ -19,9 +20,22 @@ func _ready() -> void:
 	
 	contact_monitor = true
 	max_contacts_reported = 4
+	if not body_entered.is_connected(_on_body_entered):
+		body_entered.connect(_on_body_entered)
 	
 	_setup_collision()
 	_setup_visuals()
+
+func _on_body_entered(body: Node) -> void:
+	if not CageSoundManager.instance:
+		return
+	var speed = linear_velocity.length()
+	if body is CagePlayer:
+		CageSoundManager.instance.play_kick(speed)
+	elif body.name.begins_with("GoalPost") or body.name.begins_with("GoalCrossbar"):
+		CageSoundManager.instance.play_post()
+	elif body.name != "CageFloor":
+		CageSoundManager.instance.play_wall(speed)
 
 func _setup_collision() -> void:
 	if not has_node("CollisionShape3D"):

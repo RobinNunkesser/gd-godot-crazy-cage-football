@@ -6,6 +6,7 @@ const CageStateManager = preload("res://scripts/state_manager.gd")
 const CagePlayer = preload("res://scripts/player.gd")
 const SoccerBall = preload("res://scripts/ball.gd")
 const CageCamera = preload("res://scripts/cage_camera.gd")
+const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 
 var state_manager: CageStateManager
 var player1: CagePlayer
@@ -16,6 +17,7 @@ var players: Array[CagePlayer] = []
 var ball: SoccerBall
 var camera: CageCamera
 var whistle_player: AudioStreamPlayer
+var sound_manager: CageSoundManager
 
 var ui_lobby_panel: Control
 var ui_slot_labels: Array[Label] = []
@@ -49,6 +51,10 @@ func _ready() -> void:
 	state_manager.enter_lobby()
 
 func _build_audio() -> void:
+	sound_manager = CageSoundManager.new()
+	sound_manager.name = "CageSoundManager"
+	add_child(sound_manager)
+	
 	whistle_player = AudioStreamPlayer.new()
 	whistle_player.name = "WhistleAudio"
 	if ResourceLoader.exists("res://audio/duduk.wav"):
@@ -284,7 +290,10 @@ func _build_goal(side: int, scoring_team: int) -> void:
 	
 	area.body_entered.connect(func(body: Node3D):
 		if body is SoccerBall and state_manager.current_state == CageStateManager.MatchState.PLAYING:
-			if whistle_player and whistle_player.stream:
+			if sound_manager:
+				sound_manager.play_whistle()
+				sound_manager.play_goal()
+			elif whistle_player and whistle_player.stream:
 				whistle_player.play()
 			state_manager.trigger_goal(scoring_team)
 	)
@@ -296,42 +305,83 @@ func _build_goal_posts(side: int) -> void:
 	post_mat.roughness = 0.2
 	post_mat.metallic = 0.8
 	
+	var phys_mat = PhysicsMaterial.new()
+	phys_mat.bounce = 0.95
+	phys_mat.friction = 0.1
+	
 	var x_pos = side * CageConfig.CAGE_WIDTH_X * 0.5
 	var post_radius = 0.08
+	var prefix = "LeftGoal" if side < 0 else "RightGoal"
 	
 	# Nord-Pfosten
-	var post_n = MeshInstance3D.new()
+	var post_n_body = StaticBody3D.new()
+	post_n_body.name = "GoalPost_%s_North" % prefix
+	post_n_body.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, -CageConfig.GOAL_WIDTH * 0.5)
+	post_n_body.physics_material_override = phys_mat
+	
+	var col_n = CollisionShape3D.new()
+	var cyl_shape_n = CylinderShape3D.new()
+	cyl_shape_n.radius = post_radius
+	cyl_shape_n.height = CageConfig.GOAL_HEIGHT
+	col_n.shape = cyl_shape_n
+	post_n_body.add_child(col_n)
+	
+	var post_n_mesh = MeshInstance3D.new()
 	var cyl_n = CylinderMesh.new()
 	cyl_n.top_radius = post_radius
 	cyl_n.bottom_radius = post_radius
 	cyl_n.height = CageConfig.GOAL_HEIGHT
-	post_n.mesh = cyl_n
-	post_n.material_override = post_mat
-	post_n.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, -CageConfig.GOAL_WIDTH * 0.5)
-	add_child(post_n)
+	post_n_mesh.mesh = cyl_n
+	post_n_mesh.material_override = post_mat
+	post_n_body.add_child(post_n_mesh)
+	add_child(post_n_body)
 	
 	# Süd-Pfosten
-	var post_s = MeshInstance3D.new()
+	var post_s_body = StaticBody3D.new()
+	post_s_body.name = "GoalPost_%s_South" % prefix
+	post_s_body.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, CageConfig.GOAL_WIDTH * 0.5)
+	post_s_body.physics_material_override = phys_mat
+	
+	var col_s = CollisionShape3D.new()
+	var cyl_shape_s = CylinderShape3D.new()
+	cyl_shape_s.radius = post_radius
+	cyl_shape_s.height = CageConfig.GOAL_HEIGHT
+	col_s.shape = cyl_shape_s
+	post_s_body.add_child(col_s)
+	
+	var post_s_mesh = MeshInstance3D.new()
 	var cyl_s = CylinderMesh.new()
 	cyl_s.top_radius = post_radius
 	cyl_s.bottom_radius = post_radius
 	cyl_s.height = CageConfig.GOAL_HEIGHT
-	post_s.mesh = cyl_s
-	post_s.material_override = post_mat
-	post_s.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT * 0.5, CageConfig.GOAL_WIDTH * 0.5)
-	add_child(post_s)
+	post_s_mesh.mesh = cyl_s
+	post_s_mesh.material_override = post_mat
+	post_s_body.add_child(post_s_mesh)
+	add_child(post_s_body)
 	
 	# Querlatte
-	var crossbar = MeshInstance3D.new()
-	var cyl_c = CylinderMesh.new()
-	cyl_c.top_radius = post_radius
-	cyl_c.bottom_radius = post_radius
-	cyl_c.height = CageConfig.GOAL_WIDTH
-	crossbar.mesh = cyl_c
-	crossbar.material_override = post_mat
-	crossbar.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT, 0)
-	crossbar.rotation_degrees = Vector3(90, 0, 0)
-	add_child(crossbar)
+	var bar_body = StaticBody3D.new()
+	bar_body.name = "GoalCrossbar_%s" % prefix
+	bar_body.position = Vector3(x_pos, CageConfig.GOAL_HEIGHT, 0)
+	bar_body.rotation_degrees = Vector3(90, 0, 0)
+	bar_body.physics_material_override = phys_mat
+	
+	var col_bar = CollisionShape3D.new()
+	var cyl_shape_bar = CylinderShape3D.new()
+	cyl_shape_bar.radius = post_radius
+	cyl_shape_bar.height = CageConfig.GOAL_WIDTH
+	col_bar.shape = cyl_shape_bar
+	bar_body.add_child(col_bar)
+	
+	var crossbar_mesh = MeshInstance3D.new()
+	var cyl_bar = CylinderMesh.new()
+	cyl_bar.top_radius = post_radius
+	cyl_bar.bottom_radius = post_radius
+	cyl_bar.height = CageConfig.GOAL_WIDTH
+	crossbar_mesh.mesh = cyl_bar
+	crossbar_mesh.material_override = post_mat
+	bar_body.add_child(crossbar_mesh)
+	add_child(bar_body)
 
 func _build_corner_bumpers() -> void:
 	var chamfer_len = 2.6
@@ -675,6 +725,8 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 				ball.freeze = true
 		CageStateManager.MatchState.PLAYING:
 			ui_banner_label.visible = false
+			if sound_manager:
+				sound_manager.play_whistle()
 			for p in players:
 				if p.control_type != CagePlayer.ControlType.OFF:
 					p.freeze = false
@@ -682,6 +734,8 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 				ball.freeze = false
 		CageStateManager.MatchState.GOAL_SCORED, CageStateManager.MatchState.CELEBRATION:
 			ui_banner_label.visible = true
+			if sound_manager:
+				sound_manager.play_goal()
 			if state_manager.last_scoring_team == 1:
 				ui_banner_label.text = "⚽ GOOOOAL TEAM RED! ⚽"
 			elif state_manager.last_scoring_team == 2:
@@ -694,6 +748,8 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 			reset_positions()
 		CageStateManager.MatchState.MATCH_OVER:
 			ui_banner_label.visible = true
+			if sound_manager:
+				sound_manager.play_whistle()
 			var w = state_manager.get_winner()
 			if w == 1:
 				ui_banner_label.text = "🏆 TEAM RED WINS! 🏆"

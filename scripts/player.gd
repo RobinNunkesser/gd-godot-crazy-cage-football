@@ -2,6 +2,7 @@ class_name CagePlayer
 extends RigidBody3D
 
 const CageConfig = preload("res://scripts/config.gd")
+const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 
 enum ControlType {
 	OFF,
@@ -47,8 +48,18 @@ func _ready() -> void:
 	phys_mat.friction = CageConfig.PLAYER_FRICTION
 	physics_material_override = phys_mat
 	
+	contact_monitor = true
+	max_contacts_reported = 4
+	if not body_entered.is_connected(_on_body_entered):
+		body_entered.connect(_on_body_entered)
+	
 	_setup_collision()
 	_setup_visuals()
+
+func _on_body_entered(body: Node) -> void:
+	if body is CagePlayer and CageSoundManager.instance:
+		var rel_speed = (linear_velocity - body.linear_velocity).length()
+		CageSoundManager.instance.play_tackle(rel_speed)
 
 func _setup_collision() -> void:
 	if not has_node("CollisionShape3D"):
@@ -278,6 +289,8 @@ func trigger_jump() -> void:
 	var cur_y = global_position.y if is_inside_tree() else position.y
 	if cur_y <= CageConfig.PLAYER_RADIUS + 0.35:
 		apply_central_impulse(Vector3.UP * CageConfig.PLAYER_JUMP_IMPULSE)
+		if CageSoundManager.instance:
+			CageSoundManager.instance.play_jump()
 
 func trigger_boost(input_vec: Vector2) -> void:
 	boost_cooldown = CageConfig.PLAYER_BOOST_COOLDOWN
@@ -288,6 +301,8 @@ func trigger_boost(input_vec: Vector2) -> void:
 		boost_dir = Vector3(linear_velocity.x, 0.0, linear_velocity.z).normalized()
 	
 	apply_central_impulse(boost_dir * CageConfig.PLAYER_BOOST_IMPULSE)
+	if CageSoundManager.instance:
+		CageSoundManager.instance.play_boost()
 
 func _clamp_speed() -> void:
 	var horiz_vel = Vector3(linear_velocity.x, 0.0, linear_velocity.z)
