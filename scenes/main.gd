@@ -141,11 +141,11 @@ func _build_scene() -> void:
 	stadium_light.rotation_degrees = Vector3(-55, 40, 0)
 	stadium_light.light_energy = 1.25
 	stadium_light.shadow_enabled = true
-	stadium_light.shadow_opacity = 0.55
-	stadium_light.shadow_blur = 2.0
+	stadium_light.shadow_opacity = 0.28
+	stadium_light.shadow_blur = 3.5
 	stadium_light.directional_shadow_max_distance = 45.0
-	stadium_light.shadow_bias = 0.05
-	stadium_light.shadow_normal_bias = 1.5
+	stadium_light.shadow_bias = 0.08
+	stadium_light.shadow_normal_bias = 2.0
 	add_child(stadium_light)
 	
 	# 4 Eck-Flutlichter an den Käfig-Pfosten (Multi-Winkel-Ausleuchtung gegen Schlagschatten)
@@ -305,6 +305,7 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 	var fence_box = BoxMesh.new()
 	fence_box.size = Vector3(size.x, fence_height, size.z)
 	fence_inst.mesh = fence_box
+	fence_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	fence_inst.position = Vector3(0, -size.y * 0.5 + board_height + fence_height * 0.5, 0)
 	
 	var mat = StandardMaterial3D.new()
@@ -1002,8 +1003,8 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 		stadium_light.light_color = t.get("sun_color", Color.WHITE)
 		stadium_light.light_energy = float(t.get("sun_energy", 1.25))
 		stadium_light.rotation_degrees = t.get("sun_rotation", Vector3(-55, 40, 0))
-		stadium_light.shadow_opacity = float(t.get("sun_shadow_opacity", 0.55))
-		stadium_light.shadow_blur = float(t.get("sun_shadow_blur", 2.0))
+		stadium_light.shadow_opacity = float(t.get("sun_shadow_opacity", 0.28))
+		stadium_light.shadow_blur = float(t.get("sun_shadow_blur", 3.5))
 		
 	var fl_color = t.get("floodlight_color", Color(0.95, 0.96, 1.0))
 	var fl_energy = float(t.get("floodlight_energy", 0.95))
@@ -1058,6 +1059,7 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 			f_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 			f_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 			f.material_override = f_mat
+			f.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 	# 6. Goal Posts & Neon Glow
 	var goal_emission = bool(t.get("goal_emission_enabled", false))

@@ -21,12 +21,14 @@ func add_trauma(amount: float) -> void:
 
 func _init() -> void:
 	fov = 82.0
-	near = 0.05
+	near = 0.25
+	far = 150.0
 	_current_look_target = Vector3(0.0, 0.6, 0.0)
 
 func _ready() -> void:
 	fov = 82.0
-	near = 0.05
+	near = 0.25
+	far = 150.0
 	_current_look_target = Vector3(0.0, 0.6, 0.0)
 
 func _process(delta: float) -> void:
