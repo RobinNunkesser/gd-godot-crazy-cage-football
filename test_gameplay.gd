@@ -412,6 +412,9 @@ func _test_theme_manager() -> bool:
 	assert(main_scene.board_instances.size() > 0, "Board instances should be tracked")
 	assert(main_scene.fence_instances.size() > 0, "Fence instances should be tracked")
 	assert(main_scene.goal_post_instances.size() == 6, "All 6 goal post/bar instances should be tracked")
+	assert(main_scene.corner_floodlights.size() == 4, "All 4 corner floodlights must exist")
+	assert(main_scene.corner_floodlight_fixtures.size() == 4, "All 4 corner floodlight fixtures must exist")
+	assert(main_scene.stadium_light.shadow_opacity <= 0.6, "Sun shadow opacity should be softened")
 	
 	# Switch to Sunny Rooftop
 	main_scene.theme_manager.set_theme_by_id("sunny_rooftop")
@@ -420,6 +423,7 @@ func _test_theme_manager() -> bool:
 	assert(floor_mat_sunny != null, "Floor material should be StandardMaterial3D")
 	assert(floor_mat_sunny.roughness >= 0.75, "Sunny rooftop floor roughness should match config")
 	assert(floor_mat_sunny.albedo_texture != null, "Sunny rooftop should have court texture loaded")
+	assert(main_scene.corner_floodlights[0].light_energy > 0.5, "Corner floodlights should be active in Sunny Rooftop")
 	
 	# Switch to Cyber Neon
 	main_scene.theme_manager.set_theme_by_id("cyber_neon")
@@ -427,6 +431,7 @@ func _test_theme_manager() -> bool:
 	assert(main_scene.world_env.environment.glow_bloom > 0.3, "Cyber Neon glow bloom should be elevated")
 	assert(main_scene.goal_glow_lights.size() == 2, "Both goal glow lights should exist")
 	assert(main_scene.goal_glow_lights[0].visible == true, "Goal glow light should be active in Cyber mode")
+	assert(main_scene.corner_floodlights[0].light_color.b > 0.8, "Cyber Neon floodlights should be vibrant cyan")
 	
 	# Cycle via main method
 	main_scene.cycle_arena_theme()

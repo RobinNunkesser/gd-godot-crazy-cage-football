@@ -19,6 +19,8 @@ var board_instances: Array[MeshInstance3D] = []
 var fence_instances: Array[MeshInstance3D] = []
 var goal_post_instances: Array[MeshInstance3D] = []
 var goal_glow_lights: Array[OmniLight3D] = []
+var corner_floodlights: Array[OmniLight3D] = []
+var corner_floodlight_fixtures: Array[MeshInstance3D] = []
 
 var state_manager: CageStateManager
 var player1: CagePlayer
@@ -122,6 +124,8 @@ func _build_scene() -> void:
 		sky.sky_material = proc_sky
 	env.sky = sky
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 1.05
+	env.tonemap_white = 1.15
 	env.glow_enabled = true
 	env.glow_intensity = 0.4
 	env.glow_bloom = 0.15
@@ -135,9 +139,14 @@ func _build_scene() -> void:
 	stadium_light.name = "StadiumLight"
 	stadium_light.position = Vector3(15, 25, 15)
 	stadium_light.rotation_degrees = Vector3(-55, 40, 0)
-	stadium_light.light_energy = 1.3
+	stadium_light.light_energy = 1.25
 	stadium_light.shadow_enabled = true
+	stadium_light.shadow_opacity = 0.55
+	stadium_light.shadow_blur = 2.0
 	add_child(stadium_light)
+	
+	# 4 Eck-Flutlichter an den Käfig-Pfosten (Multi-Winkel-Ausleuchtung gegen Schlagschatten)
+	_build_corner_floodlights()
 	
 	# 2. Boden (Authentischer Street-Soccer Cage-Kunstrasen)
 	var floor_body = StaticBody3D.new()
@@ -516,6 +525,52 @@ func _build_corner_bumpers() -> void:
 		body.add_child(mesh_inst)
 		
 		add_child(body)
+
+func _build_corner_floodlights() -> void:
+	corner_floodlights.clear()
+	corner_floodlight_fixtures.clear()
+	
+	var corner_configs = [
+		{"name": "CornerFloodlight_NE", "pos": Vector3(11.2, CageConfig.CAGE_HEIGHT_Y * 0.95, -6.2)},
+		{"name": "CornerFloodlight_SE", "pos": Vector3(11.2, CageConfig.CAGE_HEIGHT_Y * 0.95, 6.2)},
+		{"name": "CornerFloodlight_NW", "pos": Vector3(-11.2, CageConfig.CAGE_HEIGHT_Y * 0.95, -6.2)},
+		{"name": "CornerFloodlight_SW", "pos": Vector3(-11.2, CageConfig.CAGE_HEIGHT_Y * 0.95, 6.2)}
+	]
+	
+	for cfg in corner_configs:
+		var cpos: Vector3 = cfg["pos"]
+		
+		# Leuchten-Gehäuse (Flutlichtstrahler-Mesh an den oberen Käfigholmen)
+		var fix = MeshInstance3D.new()
+		fix.name = "Fixture_" + cfg["name"]
+		var box = BoxMesh.new()
+		box.size = Vector3(0.65, 0.4, 0.5)
+		fix.mesh = box
+		add_child(fix)
+		fix.look_at_from_position(cpos, Vector3(0.0, 1.0, 0.0), Vector3.UP)
+		
+		var fix_mat = StandardMaterial3D.new()
+		fix_mat.albedo_color = Color(0.2, 0.22, 0.26)
+		fix_mat.metallic = 0.8
+		fix_mat.roughness = 0.25
+		fix_mat.emission_enabled = true
+		fix_mat.emission = Color(0.95, 0.96, 1.0)
+		fix_mat.emission_energy_multiplier = 3.0
+		fix.material_override = fix_mat
+		corner_floodlight_fixtures.append(fix)
+		
+		# OmniLight3D für gleichmäßige 4-Eck-Ausleuchtung ohne Schlagschatten
+		var fl = OmniLight3D.new()
+		fl.name = cfg["name"]
+		var inward_dir = (Vector3(0.0, 1.0, 0.0) - cpos).normalized()
+		fl.position = cpos + inward_dir * 0.5
+		fl.omni_range = 30.0
+		fl.omni_attenuation = 1.15
+		fl.light_energy = 0.95
+		fl.light_color = Color(0.92, 0.95, 1.0)
+		fl.shadow_enabled = false
+		add_child(fl)
+		corner_floodlights.append(fl)
 
 func _build_ui() -> void:
 	var canvas = CanvasLayer.new()
@@ -935,11 +990,25 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 		env.ambient_light_color = t.get("ambient_color", Color(0.2, 0.22, 0.28))
 		env.ambient_light_energy = float(t.get("ambient_energy", 0.5))
 
-	# 2. Stadium Light
+	# 2. Stadium Light & Corner Floodlights
 	if stadium_light:
 		stadium_light.light_color = t.get("sun_color", Color.WHITE)
-		stadium_light.light_energy = float(t.get("sun_energy", 1.3))
+		stadium_light.light_energy = float(t.get("sun_energy", 1.25))
 		stadium_light.rotation_degrees = t.get("sun_rotation", Vector3(-55, 40, 0))
+		stadium_light.shadow_opacity = float(t.get("sun_shadow_opacity", 0.55))
+		stadium_light.shadow_blur = float(t.get("sun_shadow_blur", 2.0))
+		
+	var fl_color = t.get("floodlight_color", Color(0.95, 0.96, 1.0))
+	var fl_energy = float(t.get("floodlight_energy", 0.95))
+	for fl in corner_floodlights:
+		if is_instance_valid(fl):
+			fl.light_color = fl_color
+			fl.light_energy = fl_energy
+	for fix in corner_floodlight_fixtures:
+		if is_instance_valid(fix) and fix.material_override is StandardMaterial3D:
+			var fix_mat = fix.material_override as StandardMaterial3D
+			fix_mat.emission = fl_color
+			fix_mat.emission_energy_multiplier = 2.0 + fl_energy
 
 	# 3. Floor
 	if floor_inst:
