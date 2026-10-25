@@ -295,14 +295,14 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 	fence_inst.position = Vector3(0, -size.y * 0.5 + board_height + fence_height * 0.5, 0)
 	
 	var mat = StandardMaterial3D.new()
-	var fence_path = "res://assets/textures/chainlink_fence.jpg"
+	var fence_path = "res://assets/textures/chainlink_fence.png"
 	if ResourceLoader.exists(fence_path):
 		mat.albedo_texture = load(fence_path)
 		var max_span = maxf(size.x, size.z)
 		mat.uv1_scale = Vector3(max_span * 0.45, fence_height * 0.45, 1.0)
 		mat.albedo_color = custom_color
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-		mat.alpha_scissor_threshold = 0.25
+		mat.alpha_scissor_threshold = 0.5
 		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.metallic = 0.85
@@ -982,7 +982,7 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 			f_mat.roughness = float(t.get("fence_roughness", 0.25))
 			f_mat.metallic = float(t.get("fence_metallic", 0.85))
 			f_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-			f_mat.alpha_scissor_threshold = 0.25
+			f_mat.alpha_scissor_threshold = 0.5
 			f_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 			f_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 			f.material_override = f_mat
