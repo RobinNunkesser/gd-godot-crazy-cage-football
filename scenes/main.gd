@@ -45,6 +45,11 @@ var ui_hud_container: Control
 var ui_powerup_banner: Panel
 var ui_powerup_title: Label
 var ui_powerup_desc: Label
+var ui_title_label: Label
+var ui_subtitle_label: Label
+var ui_hint_label: Label
+var ui_card_slot_titles: Array[Label] = []
+var ui_key_hint_labels: Array[Label] = []
 
 const SLOT_CONTROL_OPTIONS = [
 	CagePlayer.ControlType.HUMAN_KB1,
@@ -58,6 +63,7 @@ const SLOT_CONTROL_OPTIONS = [
 ]
 
 func _ready() -> void:
+	_init_translations()
 	state_manager = CageStateManager.new()
 	state_manager.state_changed.connect(_on_state_changed)
 	state_manager.score_updated.connect(_on_score_updated)
@@ -69,7 +75,15 @@ func _ready() -> void:
 	
 	state_manager.enter_lobby()
 	if sound_manager:
-		sound_manager.play_bgm()
+		sound_manager.play_menu_bgm()
+
+func _init_translations() -> void:
+	for lang in ["de", "en"]:
+		var path = "res://i18n/translations.%s.translation" % lang
+		if ResourceLoader.exists(path):
+			var t = load(path)
+			if t is Translation:
+				TranslationServer.add_translation(t)
 
 func _build_audio() -> void:
 	sound_manager = CageSoundManager.new()
@@ -543,12 +557,12 @@ func _build_ui() -> void:
 	
 	ui_hud_container.add_child(ui_powerup_banner)
 	
-	var ui_hint = Label.new()
-	ui_hint.text = "[R]: Neustart  |  [ESC]: Zurück zur Lobby  |  [B]: P2 Bot Toggle  |  [M]: Musik AN/AUS"
-	ui_hint.position = Vector2(40, 670)
-	ui_hint.add_theme_font_size_override("font_size", 16)
-	ui_hint.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 0.8))
-	ui_hud_container.add_child(ui_hint)
+	ui_hint_label = Label.new()
+	ui_hint_label.text = tr("UI_HINTS_BAR")
+	ui_hint_label.position = Vector2(40, 670)
+	ui_hint_label.add_theme_font_size_override("font_size", 16)
+	ui_hint_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 0.8))
+	ui_hud_container.add_child(ui_hint_label)
 	
 	# --- Pre-Match Lobby Panel ---
 	ui_lobby_panel = Control.new()
@@ -559,25 +573,27 @@ func _build_ui() -> void:
 	bg_overlay.color = Color(0.06, 0.09, 0.14, 0.90)
 	ui_lobby_panel.add_child(bg_overlay)
 	
-	var title = Label.new()
-	title.text = "CRAZY CAGE FOOTBALL — LOBBY"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.position = Vector2(240, 35)
-	title.size = Vector2(800, 55)
-	title.add_theme_font_size_override("font_size", 40)
-	ui_lobby_panel.add_child(title)
+	ui_title_label = Label.new()
+	ui_title_label.text = tr("LOBBY_TITLE")
+	ui_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_title_label.position = Vector2(240, 35)
+	ui_title_label.size = Vector2(800, 55)
+	ui_title_label.add_theme_font_size_override("font_size", 40)
+	ui_lobby_panel.add_child(ui_title_label)
 	
-	var subtitle = Label.new()
-	subtitle.text = "Wähle Steuerung ([1]-[4]) & Team ([Q],[W],[E],[R])  |  Start mit [SPACE / ENTER]"
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.position = Vector2(240, 95)
-	subtitle.size = Vector2(800, 30)
-	subtitle.add_theme_font_size_override("font_size", 20)
-	subtitle.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95))
-	ui_lobby_panel.add_child(subtitle)
+	ui_subtitle_label = Label.new()
+	ui_subtitle_label.text = tr("LOBBY_SUBTITLE")
+	ui_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_subtitle_label.position = Vector2(240, 95)
+	ui_subtitle_label.size = Vector2(800, 30)
+	ui_subtitle_label.add_theme_font_size_override("font_size", 20)
+	ui_subtitle_label.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95))
+	ui_lobby_panel.add_child(ui_subtitle_label)
 	
 	ui_slot_labels.clear()
 	ui_team_labels.clear()
+	ui_card_slot_titles.clear()
+	ui_key_hint_labels.clear()
 	var col_width = 260
 	var start_x = 80
 	for i in range(4):
@@ -587,12 +603,16 @@ func _build_ui() -> void:
 		ui_lobby_panel.add_child(card)
 		
 		var p_title = Label.new()
-		p_title.text = "SLOT %d" % (i + 1)
+		var slot_fmt = tr("SLOT_TITLE")
+		if not ("%d" in slot_fmt):
+			slot_fmt = "SLOT %d"
+		p_title.text = slot_fmt % (i + 1)
 		p_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		p_title.position = Vector2(10, 15)
 		p_title.size = Vector2(col_width - 20, 30)
 		p_title.add_theme_font_size_override("font_size", 22)
 		card.add_child(p_title)
+		ui_card_slot_titles.append(p_title)
 		
 		var team_lbl = Label.new()
 		team_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -614,13 +634,17 @@ func _build_ui() -> void:
 		
 		var key_hint = Label.new()
 		var team_keys = ["Q", "W", "E", "R"]
-		key_hint.text = "Taste [%d]: Modus\nTaste [%s]: Team wechseln" % [i + 1, team_keys[i]]
+		var hint_fmt = tr("KEY_HINT")
+		if not ("%d" in hint_fmt and "%s" in hint_fmt):
+			hint_fmt = "Taste [%d]: Modus\nTaste [%s]: Team wechseln"
+		key_hint.text = hint_fmt % [i + 1, team_keys[i]]
 		key_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		key_hint.position = Vector2(10, 270)
 		key_hint.size = Vector2(col_width - 20, 60)
 		key_hint.add_theme_font_size_override("font_size", 16)
 		key_hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 		card.add_child(key_hint)
+		ui_key_hint_labels.append(key_hint)
 	
 	ui_powerup_toggle_label = Label.new()
 	ui_powerup_toggle_label.position = Vector2(100, 550)
@@ -634,43 +658,65 @@ func _build_ui() -> void:
 	canvas.add_child(ui_lobby_panel)
 	add_child(canvas)
 
+func _refresh_all_localized_text() -> void:
+	if ui_title_label:
+		ui_title_label.text = tr("LOBBY_TITLE")
+	if ui_subtitle_label:
+		ui_subtitle_label.text = tr("LOBBY_SUBTITLE")
+	if ui_hint_label:
+		ui_hint_label.text = tr("UI_HINTS_BAR")
+	var slot_fmt = tr("SLOT_TITLE")
+	if not ("%d" in slot_fmt):
+		slot_fmt = "SLOT %d"
+	for i in range(ui_card_slot_titles.size()):
+		ui_card_slot_titles[i].text = slot_fmt % (i + 1)
+	var team_keys = ["Q", "W", "E", "R"]
+	var hint_fmt = tr("KEY_HINT")
+	if not ("%d" in hint_fmt and "%s" in hint_fmt):
+		hint_fmt = "Taste [%d]: Modus\nTaste [%s]: Team wechseln"
+	for i in range(ui_key_hint_labels.size()):
+		ui_key_hint_labels[i].text = hint_fmt % [i + 1, team_keys[i]]
+	_update_lobby_ui()
+
 func _update_lobby_ui() -> void:
 	for i in range(players.size()):
 		var p = players[i]
-		ui_slot_labels[i].text = _get_control_type_name(p.control_type)
-		if p.team_id == 1:
-			ui_team_labels[i].text = "TEAM ROT (1)"
-			ui_team_labels[i].add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
-		else:
-			ui_team_labels[i].text = "TEAM BLAU (2)"
-			ui_team_labels[i].add_theme_color_override("font_color", Color(0.3, 0.6, 1.0))
+		if i < ui_slot_labels.size():
+			ui_slot_labels[i].text = _get_control_type_name(p.control_type)
+		if i < ui_team_labels.size():
+			if p.team_id == 1:
+				ui_team_labels[i].text = tr("TEAM_RED_LBL")
+				ui_team_labels[i].add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+			else:
+				ui_team_labels[i].text = tr("TEAM_BLUE_LBL")
+				ui_team_labels[i].add_theme_color_override("font_color", Color(0.3, 0.6, 1.0))
 	
 	if ui_powerup_toggle_label:
 		if CageConfig.powerups_enabled:
-			ui_powerup_toggle_label.text = "⚡ [P] POWER-UPS: AKTIVIERT  •  Super-Shot | Speed-Boots | Magnetfuß | Freeze-Tackle | Cage-Shaker ⚡"
+			ui_powerup_toggle_label.text = tr("POWERUPS_ENABLED_LOBBY")
 			ui_powerup_toggle_label.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
 		else:
-			ui_powerup_toggle_label.text = "🚫 [P] POWER-UPS: DEAKTIVIERT (Klassischer Pure-Cage-Modus ohne Pickups) 🚫"
+			ui_powerup_toggle_label.text = tr("POWERUPS_DISABLED_LOBBY")
 			ui_powerup_toggle_label.add_theme_color_override("font_color", Color(0.9, 0.45, 0.45))
 
 func _get_control_type_name(ct: CagePlayer.ControlType) -> String:
 	match ct:
 		CagePlayer.ControlType.OFF:
-			return "[ INAKTIV ]\n(OFF)"
+			return tr("CTRL_OFF")
 		CagePlayer.ControlType.HUMAN_KB1:
-			return "SPIELER\n(Tastatur 1: WASD + Space/Shift)"
+			return tr("CTRL_KB1")
 		CagePlayer.ControlType.HUMAN_KB2:
-			return "SPIELER\n(Tastatur 2: Pfeile + Enter/Ctrl)"
+			return tr("CTRL_KB2")
 		CagePlayer.ControlType.GAMEPAD_0:
-			return "SPIELER\n(Gamepad 1: Stick + A/B)"
+			return tr("CTRL_GAMEPAD_0")
 		CagePlayer.ControlType.GAMEPAD_1:
-			return "SPIELER\n(Gamepad 2: Stick + A/B)"
+			return tr("CTRL_GAMEPAD_1")
 		CagePlayer.ControlType.GAMEPAD_2:
-			return "SPIELER\n(Gamepad 3: Stick + A/B)"
+			return tr("CTRL_GAMEPAD_2")
 		CagePlayer.ControlType.GAMEPAD_3:
-			return "SPIELER\n(Gamepad 4: Stick + A/B)"
+			return tr("CTRL_GAMEPAD_3")
 		CagePlayer.ControlType.AI_BOT:
-			return "KI-BOT\n(Autonomes Dribbeln & Zıplama)"
+			return tr("CTRL_AI_BOT")
 	return "UNKNOWN"
 
 func cycle_player_slot(index: int) -> void:
@@ -707,6 +753,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_M:
 			toggle_bgm_music()
 			return
+		elif event.keycode == KEY_L:
+			toggle_language()
+			return
+		elif event.keycode == KEY_F11:
+			toggle_fullscreen()
+			return
 			
 		if state_manager.current_state == CageStateManager.MatchState.LOBBY:
 			if event.keycode == KEY_1:
@@ -742,13 +794,45 @@ func toggle_bgm_music() -> void:
 		var active = sound_manager.toggle_bgm()
 		if ui_banner_label:
 			ui_banner_label.visible = true
-			ui_banner_label.text = "MUSIK: " + ("AN 🔊" if active else "AUS 🔇")
+			ui_banner_label.text = tr("MUSIC_STATUS_ON") if active else tr("MUSIC_STATUS_OFF")
 			var tween = create_tween()
 			tween.tween_interval(1.2)
 			tween.tween_callback(func():
-				if is_instance_valid(ui_banner_label) and state_manager.current_state == CageStateManager.MatchState.PLAYING:
+				if is_instance_valid(ui_banner_label) and (state_manager.current_state == CageStateManager.MatchState.PLAYING or state_manager.current_state == CageStateManager.MatchState.LOBBY):
 					ui_banner_label.visible = false
 			)
+
+func toggle_language() -> void:
+	var cur = TranslationServer.get_locale()
+	var new_locale = "en" if cur.begins_with("de") else "de"
+	TranslationServer.set_locale(new_locale)
+	_refresh_all_localized_text()
+	if ui_banner_label:
+		ui_banner_label.visible = true
+		ui_banner_label.text = tr("LANG_STATUS_EN") if new_locale == "en" else tr("LANG_STATUS_DE")
+		var tween = create_tween()
+		tween.tween_interval(1.2)
+		tween.tween_callback(func():
+			if is_instance_valid(ui_banner_label) and (state_manager.current_state == CageStateManager.MatchState.PLAYING or state_manager.current_state == CageStateManager.MatchState.LOBBY):
+				ui_banner_label.visible = false
+		)
+
+func toggle_fullscreen() -> void:
+	var mode = DisplayServer.window_get_mode()
+	var is_fs = (mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	if is_fs:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	if ui_banner_label:
+		ui_banner_label.visible = true
+		ui_banner_label.text = tr("FULLSCREEN_OFF") if is_fs else tr("FULLSCREEN_ON")
+		var tween = create_tween()
+		tween.tween_interval(1.2)
+		tween.tween_callback(func():
+			if is_instance_valid(ui_banner_label) and (state_manager.current_state == CageStateManager.MatchState.PLAYING or state_manager.current_state == CageStateManager.MatchState.LOBBY):
+				ui_banner_label.visible = false
+		)
 
 func toggle_powerups() -> void:
 	CageConfig.powerups_enabled = not CageConfig.powerups_enabled
@@ -756,7 +840,7 @@ func toggle_powerups() -> void:
 		clear_power_ups()
 	_update_lobby_ui()
 	if ui_banner_label and state_manager.current_state != CageStateManager.MatchState.LOBBY:
-		ui_banner_label.text = "POWER-UPS: " + ("AKTIVIERT" if CageConfig.powerups_enabled else "DEAKTIVIERT")
+		ui_banner_label.text = tr("POWERUPS_NOW_ON") if CageConfig.powerups_enabled else tr("POWERUPS_NOW_OFF")
 
 func clear_power_ups() -> void:
 	for p in active_power_ups:
@@ -805,7 +889,7 @@ func show_powerup_banner(player: CagePlayer, type: CageConfig.PowerUpType) -> vo
 		return
 	var col = CagePowerUp.get_type_color(type)
 	if ui_powerup_title:
-		ui_powerup_title.text = "⚡ SPIELER %d: %s ⚡" % [player.player_id, CagePowerUp.get_short_title(type)]
+		ui_powerup_title.text = tr("PUP_COLLECTED_TITLE") % [player.player_id, CagePowerUp.get_short_title(type)]
 		ui_powerup_title.add_theme_color_override("font_color", col)
 	if ui_powerup_desc:
 		ui_powerup_desc.text = CagePowerUp.get_explanation(type)
@@ -839,7 +923,7 @@ func start_match_from_lobby() -> void:
 				team2_count += 1
 	
 	if team1_count < 1 or team2_count < 1:
-		ui_banner_label.text = "Mindestens 1 Spieler pro Team erforderlich!"
+		ui_banner_label.text = tr("MIN_PLAYERS_WARN")
 		return
 	
 	ui_lobby_panel.visible = false
@@ -848,6 +932,8 @@ func start_match_from_lobby() -> void:
 	clear_power_ups()
 	reset_positions()
 	state_manager.start_match()
+	if sound_manager:
+		sound_manager.play_match_bgm()
 	
 	if CageConfig.powerups_enabled:
 		spawn_power_up()
@@ -860,6 +946,8 @@ func return_to_lobby() -> void:
 	if ball:
 		ball.freeze = true
 	state_manager.enter_lobby()
+	if sound_manager:
+		sound_manager.play_menu_bgm()
 	ui_lobby_panel.visible = true
 	_update_lobby_ui()
 
@@ -872,7 +960,7 @@ func _process(delta: float) -> void:
 		if sec > 0:
 			ui_banner_label.text = str(sec)
 		else:
-			ui_banner_label.text = "⚽ KICK OFF! ⚽"
+			ui_banner_label.text = tr("BANNER_KICKOFF")
 	
 	if state_manager.current_state == CageStateManager.MatchState.PLAYING:
 		if CageConfig.powerups_enabled:
@@ -961,11 +1049,11 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 				tween.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 				tween.tween_property(ui_banner_label, "scale", Vector2.ONE, 0.45)
 			if state_manager.last_scoring_team == 1:
-				ui_banner_label.text = "⚽ GOOOOAL TEAM RED! ⚽"
+				ui_banner_label.text = tr("GOAL_RED")
 			elif state_manager.last_scoring_team == 2:
-				ui_banner_label.text = "⚽ GOOOOAL TEAM BLUE! ⚽"
+				ui_banner_label.text = tr("GOAL_BLUE")
 			else:
-				ui_banner_label.text = "⚽ GOOOOAL! ⚽"
+				ui_banner_label.text = tr("GOAL_GENERIC")
 			if ball:
 				ball.linear_velocity *= 0.2
 		CageStateManager.MatchState.RESET:
@@ -976,11 +1064,11 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 				sound_manager.play_whistle()
 			var w = state_manager.get_winner()
 			if w == 1:
-				ui_banner_label.text = "🏆 TEAM RED WINS! 🏆"
+				ui_banner_label.text = tr("WIN_RED")
 			elif w == 2:
-				ui_banner_label.text = "🏆 TEAM BLUE WINS! 🏆"
+				ui_banner_label.text = tr("WIN_BLUE")
 			else:
-				ui_banner_label.text = "DRAW! Press [R] to rematch"
+				ui_banner_label.text = tr("MATCH_DRAW")
 
 func _on_score_updated(_team_id: int, _new_score: int) -> void:
 	_update_score_label()

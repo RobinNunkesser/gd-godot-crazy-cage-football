@@ -24,24 +24,52 @@ Zwei rollende, elastische Kugel-Spieler mit Comic-Augen treten in einem geschlos
 
 ---
 
+## 🕹️ Hotkeys & System-Steuerung
+
+| Hotkey | Funktion |
+| :--- | :--- |
+| `[R]` | Match-Neustart / Rematch |
+| `[ESC]` | Zurück zur Pre-Match-Lobby |
+| `[B]` | Spieler 2 zwischen KI-Bot und lokalem Spieler umschalten |
+| `[P]` | Power-Ups aktivieren / deaktivieren |
+| `[M]` | Musik stummschalten / reaktivieren |
+| `[L]` | Sprache umschalten (Deutsch 🇩🇪 / Englisch 🇬🇧) |
+| `[F11]` | Vollbild / Fenstermodus umschalten (Startet standardmäßig im Vollbild) |
+
+---
+
 ## 🏗️ Projekt-Architektur
 
 - **`docs/gdd/MICRO_GDD.md`:** 5-Punkte-Spezifikation (High Concept, Core Loop, Controls, State Space, Scoring).
 - **`scripts/config.gd` (`CageConfig`):** Käfig-Dimensionen ($24\times 14\times 7\,\text{m}$), Bounciness-Werte, Sprungkraft, Timer.
 - **`scripts/state_manager.gd` (`CageStateManager`):** Match-State-Machine (`KickOff` $\to$ `Playing` $\to$ `Celebration` $\to$ `Reset` $\to$ `MatchOver`).
 - **`scripts/player.gd` (`CagePlayer`):** Kugel-Athlet mit Boden-Kinematik, vertikalem `Zıplama`-Sprung und prozedural auf den Ball blickenden Comic-Augen.
-- **`scripts/ball.gd` (`SoccerBall`):** Hochelastischer Fußball ($e = 0.82$) mit realistischer Wand- und Bandenreflexion.
+- **`scripts/ball.gd` (`SoccerBall`):** Hochelastischer Fußball ($e = 0.82$) mit realistischer Wand- und Bandenreflexion und `continuous_cd`.
 - **`scripts/cage_camera.gd` (`CageCamera`):** Dynamische Weitwinkel-Kamera mit Ball- und Spieler-Tracking.
-- **`audio/`:** Originale Sound-Effekte (`duduk.wav` Schiedsrichterpfeife, `cato.wav` & `pato.wav` Ballstöße).
+- **`scripts/power_up.gd` (`CagePowerUp`):** 5 Power-Up-Typen (Super-Shot, Speed-Boots, Magnetfuß, Freeze-Tackle, Cage-Shaker).
+- **`i18n/`:** Zweisprachige Lokalisierung (Deutsch / Englisch) via Godot `TranslationServer`.
+- **`audio/`:** Juhani Junkala Chiptunes, Pfeife (`duduk.wav`), Kicks (`cato.wav`, `pato.wav`).
 - **`scenes/main.tscn`:** Hauptszene mit Gitterkäfig, Toren, Netzen und Match-HUD.
 
 ---
 
 ## 🎵 Musik & Audio-Attribution
 
-- **Hintergrundmusik:** *"Level 1"* aus der Sammlung *"5 Chiptunes (Action)"* von **Juhani Junkala (SubspaceAudio)** via OpenGameArt ([CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)).
+Aus der Sammlung *"5 Chiptunes (Action)"* von **Juhani Junkala (SubspaceAudio)** via OpenGameArt ([CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)):
+- **Menü-Musik (`audio/music_menu.ogg`):** *"Title Screen"* (Pre-Match Lobby)
+- **Match-Musik (`audio/music_action_level1.ogg`):** *"Level 1"* (Gameplay)
 - **Fallback-Synthese:** Eingebauter prozeduraler 16-Bit-Chiptune-Synthesizer in `scripts/cage_sound_manager.gd`.
-- **Musik-Steuerung:** Mit Taste `[M]` kann die Musik jederzeit im Spiel und in der Lobby stummgeschaltet bzw. reaktiviert werden. Bei Torerfolg wird die BGM automatisch kurz geduckt.
+- **Musik-Steuerung:** Taste `[M]` schaltet die Musik stumm. Bei Torerfolg wird die BGM automatisch geduckt.
+
+---
+
+## 🚀 Export & GitHub Release (v0.1.0)
+
+Automatisierte Multiplattform-Builds werden per GitHub Actions (`.github/workflows/export.yml`) bei jedem Git-Tag `v*` erstellt:
+- **Windows Desktop:** `CrazyCageFootball-Windows.zip` (`.exe`)
+- **Linux:** `CrazyCageFootball-Linux.zip` (`.x86_64`)
+- **macOS:** `CrazyCageFootball-macOS.zip` (`.app`)
+- **Web (HTML5):** `CrazyCageFootball-Web.zip` (`index.html`)
 
 ---
 
@@ -53,3 +81,4 @@ Das Spiel verfügt über einen vollständig headless lauffähigen Test-Runner:
 godot --headless -s test_gameplay.gd
 ```
 Exits mit `0` bei Erfolg.
+

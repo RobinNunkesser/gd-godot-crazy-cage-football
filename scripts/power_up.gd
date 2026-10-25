@@ -25,43 +25,32 @@ func _ready() -> void:
 static func get_short_title(t: CageConfig.PowerUpType) -> String:
 	match t:
 		CageConfig.PowerUpType.SUPER_SHOT:
-			return "🔥 SUPER-SHOT"
+			return "🔥 " + TranslationServer.translate("PUP_SUPER_SHOT_NAME")
 		CageConfig.PowerUpType.SPEED_BOOTS:
-			return "⚡ SPEED-BOOTS (6s)"
+			return "⚡ " + TranslationServer.translate("PUP_SPEED_BOOTS_NAME")
 		CageConfig.PowerUpType.MAGNET_FOOT:
-			return "🧲 MAGNETFUSS (6s)"
+			return "🧲 " + TranslationServer.translate("PUP_MAGNET_FOOT_NAME")
 		CageConfig.PowerUpType.FREEZE_TACKLE:
-			return "❄️ FREEZE-TACKLE"
+			return "❄️ " + TranslationServer.translate("PUP_FREEZE_TACKLE_NAME")
 		CageConfig.PowerUpType.CAGE_SHAKER:
-			return "💥 CAGE-SHAKER"
+			return "💥 " + TranslationServer.translate("PUP_CAGE_SHAKER_NAME")
 	return "POWER-UP"
 
 static func get_type_name(t: CageConfig.PowerUpType) -> String:
-	match t:
-		CageConfig.PowerUpType.SUPER_SHOT:
-			return "🔥 SUPER-SHOT (Feuerball)"
-		CageConfig.PowerUpType.SPEED_BOOTS:
-			return "⚡ SPEED-BOOTS (Sprint-Boost)"
-		CageConfig.PowerUpType.MAGNET_FOOT:
-			return "🧲 MAGNETFUSS (Klebeball)"
-		CageConfig.PowerUpType.FREEZE_TACKLE:
-			return "❄️ FREEZE-TACKLE (Eisblock)"
-		CageConfig.PowerUpType.CAGE_SHAKER:
-			return "💥 CAGE-SHAKER (Stoßwelle)"
-	return "POWER-UP"
+	return get_short_title(t)
 
 static func get_explanation(t: CageConfig.PowerUpType) -> String:
 	match t:
 		CageConfig.PowerUpType.SUPER_SHOT:
-			return "Nächster Schuss mit 2.2x Speed, Flammen & Durchschlagskraft!"
+			return TranslationServer.translate("PUP_SUPER_SHOT_DESC")
 		CageConfig.PowerUpType.SPEED_BOOTS:
-			return "6 Sekunden Dauersprint (+60% Speed) & Wendigkeit!"
+			return TranslationServer.translate("PUP_SPEED_BOOTS_DESC")
 		CageConfig.PowerUpType.MAGNET_FOOT:
-			return "6 Sekunden Ball-Magnet für enges Dribbling & Ballkontrolle!"
+			return TranslationServer.translate("PUP_MAGNET_FOOT_DESC")
 		CageConfig.PowerUpType.FREEZE_TACKLE:
-			return "Nächster Bodycheck friert den Gegenspieler für 2s ein!"
+			return TranslationServer.translate("PUP_FREEZE_TACKLE_DESC")
 		CageConfig.PowerUpType.CAGE_SHAKER:
-			return "Stoßwelle erschüttert den Käfig und schleudert Rivalen weg!"
+			return TranslationServer.translate("PUP_CAGE_SHAKER_DESC")
 	return ""
 
 static func get_type_color(t: CageConfig.PowerUpType) -> Color:

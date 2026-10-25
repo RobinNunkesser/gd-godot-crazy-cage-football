@@ -51,6 +51,8 @@ func _test_sound_manager() -> bool:
 	assert(sm.stream_jump != null, "Jump audio stream must be generated")
 	assert(sm.stream_boost != null, "Boost audio stream must be generated")
 	assert(sm.stream_tackle != null, "Tackle audio stream must be generated")
+	assert(sm.stream_menu_bgm != null, "Menu BGM audio stream must be loaded or generated")
+	assert(sm.stream_match_bgm != null, "Match BGM audio stream must be loaded or generated")
 	assert(sm.stream_bgm != null, "BGM audio stream must be loaded or generated")
 	assert(sm.stream_bgm is AudioStream, "BGM stream must be an AudioStream")
 	if sm.stream_bgm is AudioStreamOggVorbis:
@@ -68,7 +70,8 @@ func _test_sound_manager() -> bool:
 	sm.play_jump()
 	sm.play_boost()
 	sm.play_tackle(2.0)
-	sm.play_bgm()
+	sm.play_menu_bgm()
+	sm.play_match_bgm()
 	sm.duck_bgm(1.0)
 	assert(sm.bgm_enabled == true, "BGM should initially be enabled")
 	sm.toggle_bgm()
@@ -264,6 +267,20 @@ func _test_main_scene() -> bool:
 	assert(main_scene.player3.team_id == 2, "P3 should toggle to Team 2")
 	main_scene.start_match_from_lobby()
 	assert(main_scene.state_manager.current_state == CageStateManager.MatchState.WARMUP, "State should be WARMUP after match start")
+	
+	# Language & Localization Toggle DE / EN testen
+	TranslationServer.set_locale("de")
+	main_scene._refresh_all_localized_text()
+	assert("LOBBY" in main_scene.ui_title_label.text, "German title must be present")
+	main_scene.toggle_language()
+	assert(TranslationServer.get_locale().begins_with("en"), "Locale should toggle to English")
+	assert("LOBBY" in main_scene.ui_title_label.text, "English title must be present")
+	main_scene.toggle_language()
+	assert(TranslationServer.get_locale().begins_with("de"), "Locale should toggle back to German")
+	
+	# Fullscreen Toggle testen
+	main_scene.toggle_fullscreen()
+	main_scene.toggle_fullscreen()
 	
 	main_scene._process(0.016)
 	main_scene.queue_free()

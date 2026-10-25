@@ -15,6 +15,8 @@ var stream_goal: AudioStreamWAV
 var stream_jump: AudioStreamWAV
 var stream_boost: AudioStreamWAV
 var stream_tackle: AudioStreamWAV
+var stream_menu_bgm: AudioStream
+var stream_match_bgm: AudioStream
 var stream_bgm: AudioStream
 
 var _players: Array[AudioStreamPlayer] = []
@@ -47,7 +49,7 @@ func _setup_bgm_player() -> void:
 	_bgm_player = AudioStreamPlayer.new()
 	_bgm_player.name = "BGMPlayer"
 	_bgm_player.bus = "Master"
-	_bgm_player.stream = stream_bgm
+	_bgm_player.stream = stream_menu_bgm if stream_menu_bgm else stream_bgm
 	_bgm_player.volume_db = BGM_BASE_VOLUME_DB
 	add_child(_bgm_player)
 
@@ -59,12 +61,32 @@ func _get_available_player() -> AudioStreamPlayer:
 	return p
 
 ## BGM-Steuerung
+func play_menu_bgm() -> void:
+	if not is_inside_tree() or not bgm_enabled or not _bgm_player or not _bgm_player.is_inside_tree():
+		return
+	if _bgm_player.stream != stream_menu_bgm or not _bgm_player.playing:
+		_bgm_player.stop()
+		_bgm_player.stream = stream_menu_bgm
+		_bgm_player.volume_db = BGM_BASE_VOLUME_DB
+		_bgm_player.play()
+
+func play_match_bgm() -> void:
+	if not is_inside_tree() or not bgm_enabled or not _bgm_player or not _bgm_player.is_inside_tree():
+		return
+	if _bgm_player.stream != stream_match_bgm or not _bgm_player.playing:
+		_bgm_player.stop()
+		_bgm_player.stream = stream_match_bgm
+		_bgm_player.volume_db = BGM_BASE_VOLUME_DB
+		_bgm_player.play()
+
 func play_bgm() -> void:
 	if not is_inside_tree() or not bgm_enabled or not _bgm_player or not _bgm_player.is_inside_tree():
 		return
 	if not _bgm_player.playing:
-		_bgm_player.volume_db = BGM_BASE_VOLUME_DB
-		_bgm_player.play()
+		if _bgm_player.stream == stream_menu_bgm:
+			play_menu_bgm()
+		else:
+			play_match_bgm()
 
 func stop_bgm() -> void:
 	if _bgm_player and _bgm_player.is_inside_tree() and _bgm_player.playing:
@@ -194,15 +216,26 @@ func _synthesize_all_sounds() -> void:
 	stream_boost = _generate_boost_wav()
 	stream_tackle = _generate_tackle_wav()
 	
-	# Juhani Junkala [Retro Game Music Pack] "Level 1" (Action) via OpenGameArt (CC0 1.0 Universal)
-	# Behält prozeduralen Chiptune-Synthesizer als zuverlässigen Fallback.
-	var bgm_path = "res://audio/music_action_level1.ogg"
-	if ResourceLoader.exists(bgm_path):
-		var res = load(bgm_path)
-		if res is AudioStream:
-			stream_bgm = res
-	if not stream_bgm:
-		stream_bgm = _generate_bgm_wav()
+	# Juhani Junkala [Retro Game Music Pack] via OpenGameArt (CC0 1.0 Universal)
+	# 1. Menü-Theme: "Title Screen"
+	var menu_path = "res://audio/music_menu.ogg"
+	if ResourceLoader.exists(menu_path):
+		var res_menu = load(menu_path)
+		if res_menu is AudioStream:
+			stream_menu_bgm = res_menu
+	if not stream_menu_bgm:
+		stream_menu_bgm = _generate_bgm_wav()
+		
+	# 2. Match-Theme: "Level 1" (Action)
+	var match_path = "res://audio/music_action_level1.ogg"
+	if ResourceLoader.exists(match_path):
+		var res_match = load(match_path)
+		if res_match is AudioStream:
+			stream_match_bgm = res_match
+	if not stream_match_bgm:
+		stream_match_bgm = _generate_bgm_wav()
+
+	stream_bgm = stream_match_bgm
 
 func _generate_kick_wav() -> AudioStreamWAV:
 	var mix_rate = 22050

@@ -7,14 +7,23 @@ config_version=5
 [application]
 
 config/name="Crazy Cage Football"
+config/version="0.1.0"
 config/description="3D Physics Cage Soccer Game in Godot 4 inspired by Zippir: Kafes Futbolu. Roll, jump (Ziplama) and score bank-shot goals!"
 run/main_scene="res://scenes/main.tscn"
+config/icon="res://assets/icon.png"
 config/features=PackedStringArray("4.7", "Forward Plus")
+
+[locale]
+
+translations=PackedStringArray("res://i18n/translations.de.translation", "res://i18n/translations.en.translation")
+locale/test="de"
+locale/fallback="en"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/mode=3
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
