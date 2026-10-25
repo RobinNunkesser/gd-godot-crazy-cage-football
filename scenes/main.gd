@@ -666,6 +666,7 @@ func _build_ui() -> void:
 	# In-Game HUD
 	ui_hud_container = Control.new()
 	ui_hud_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui_hud_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas.add_child(ui_hud_container)
 	
 	# Score Center

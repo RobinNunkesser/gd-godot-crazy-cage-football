@@ -138,7 +138,8 @@ func _build_ui() -> void:
 	joystick_base.custom_minimum_size = Vector2(joystick_radius * 2.0, joystick_radius * 2.0)
 	joystick_base.size = joystick_base.custom_minimum_size
 	joystick_base.position = _joystick_center - Vector2(joystick_radius, joystick_radius)
-	joystick_base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	joystick_base.mouse_filter = Control.MOUSE_FILTER_STOP
+	joystick_base.gui_input.connect(_on_joystick_gui_input)
 	
 	var base_style = StyleBoxFlat.new()
 	base_style.set_corner_radius_all(int(joystick_radius))
@@ -173,10 +174,14 @@ func _build_ui() -> void:
 	# --- 2. Action Buttons (Rechts) ---
 	jump_btn = _create_action_button("JUMP", Color(1.0, 0.88, 0.25, 0.85), Color(0.2, 0.15, 0.02, 0.7), 46.0)
 	jump_btn.name = "TouchJumpBtn"
+	jump_btn.button_down.connect(_on_jump_down)
+	jump_btn.button_up.connect(_on_jump_up)
 	root_control.add_child(jump_btn)
 
 	boost_btn = _create_action_button("BOOST", Color(1.0, 0.2, 0.6, 0.85), Color(0.2, 0.02, 0.12, 0.7), 40.0)
 	boost_btn.name = "TouchBoostBtn"
+	boost_btn.button_down.connect(_on_boost_down)
+	boost_btn.button_up.connect(_on_boost_up)
 	root_control.add_child(boost_btn)
 
 	# --- 3. Top Quick-Access Buttons ---
@@ -216,7 +221,7 @@ func _create_action_button(label: String, border_col: Color, bg_col: Color, radi
 	var btn = Button.new()
 	btn.text = label
 	btn.focus_mode = Control.FOCUS_NONE
-	btn.mouse_filter = Control.MOUSE_FILTER_IGNORE # Eingaben werden über _unhandled_input mit Multi-Touch verarbeitet
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	btn.custom_minimum_size = Vector2(radius * 2.0, radius * 2.0)
 	btn.size = btn.custom_minimum_size
 	
@@ -236,12 +241,11 @@ func _create_action_button(label: String, border_col: Color, bg_col: Color, radi
 
 func _layout_buttons(vp_size: Vector2) -> void:
 	_joystick_default_pos = Vector2(130.0, maxf(vp_size.y - 130.0, 200.0))
-	if _joystick_touch_id == -1:
-		_joystick_center = _joystick_default_pos
-		if is_instance_valid(joystick_base):
-			joystick_base.position = _joystick_center - Vector2(joystick_radius, joystick_radius)
+	_joystick_center = _joystick_default_pos
+	if is_instance_valid(joystick_base):
+		joystick_base.position = _joystick_center - Vector2(joystick_radius, joystick_radius)
 
-	# Jump Button rechts unten (gut mit rechtem Daumen erreichbar)
+	# Jump Button rechts unten
 	if is_instance_valid(jump_btn):
 		jump_btn.position = Vector2(vp_size.x - 125.0, vp_size.y - 130.0)
 	
@@ -261,8 +265,71 @@ func _layout_buttons(vp_size: Vector2) -> void:
 func _on_viewport_resized() -> void:
 	_layout_buttons(_get_viewport_size())
 
-func _unhandled_input(event: InputEvent) -> void:
-	# Falls auf Desktop mit Touchscreen erstmals getoucht wird: Touch-Overlay dynamisch einblenden
+func _on_jump_down() -> void:
+	Input.action_press("p1_jump")
+	_pulse_button(jump_btn, true)
+
+func _on_jump_up() -> void:
+	Input.action_release("p1_jump")
+	_pulse_button(jump_btn, false)
+
+func _on_boost_down() -> void:
+	Input.action_press("p1_boost")
+	_pulse_button(boost_btn, true)
+
+func _on_boost_up() -> void:
+	Input.action_release("p1_boost")
+	_pulse_button(boost_btn, false)
+
+func _on_joystick_gui_input(event: InputEvent) -> void:
+	if not is_gameplay_active:
+		return
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		if st.pressed:
+			_joystick_touch_id = st.index
+			_update_joystick_from_local(st.position)
+		elif st.index == _joystick_touch_id:
+			_joystick_touch_id = -1
+			_reset_joystick()
+	elif event is InputEventScreenDrag:
+		var sd := event as InputEventScreenDrag
+		if sd.index == _joystick_touch_id:
+			_update_joystick_from_local(sd.position)
+	elif event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				_joystick_touch_id = 999
+				_update_joystick_from_local(mb.position)
+			else:
+				_joystick_touch_id = -1
+				_reset_joystick()
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0 and _joystick_touch_id == 999:
+			_update_joystick_from_local(mm.position)
+
+func _update_joystick_from_local(local_pos: Vector2) -> void:
+	var center := Vector2(joystick_radius, joystick_radius)
+	var diff := local_pos - center
+	var dist := diff.length()
+	if dist > joystick_radius:
+		diff = diff.normalized() * joystick_radius
+
+	var knob_rad = 32.0
+	if is_instance_valid(joystick_knob):
+		joystick_knob.position = (diff + center) - Vector2(knob_rad, knob_rad)
+
+	var raw_vec = diff / joystick_radius
+	if raw_vec.length() < deadzone:
+		_input_vector = Vector2.ZERO
+	else:
+		_input_vector = raw_vec
+
+	_dispatch_action_events(_input_vector)
+
+func _input(event: InputEvent) -> void:
 	if not is_touch_active:
 		if event is InputEventScreenTouch and event.pressed:
 			is_touch_active = true
@@ -273,6 +340,30 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not is_gameplay_active:
 		return
 
+	# Joystick Drag-Verfolgung auch wenn der Finger über den Radius hinausgezogen wird
+	if _joystick_touch_id != -1:
+		if event is InputEventScreenDrag and event.index == _joystick_touch_id:
+			if is_instance_valid(joystick_base):
+				var local_pos = joystick_base.get_global_transform().affine_inverse() * event.position
+				_update_joystick_from_local(local_pos)
+		elif event is InputEventScreenTouch and event.index == _joystick_touch_id and not event.pressed:
+			_joystick_touch_id = -1
+			_reset_joystick()
+		elif event is InputEventMouseMotion and _joystick_touch_id == 999:
+			if (event.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+				if is_instance_valid(joystick_base):
+					var local_pos = joystick_base.get_global_transform().affine_inverse() * event.position
+					_update_joystick_from_local(local_pos)
+			else:
+				_joystick_touch_id = -1
+				_reset_joystick()
+		elif event is InputEventMouseButton and _joystick_touch_id == 999 and not event.pressed:
+			_joystick_touch_id = -1
+			_reset_joystick()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not is_touch_active or not is_gameplay_active:
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.pressed:
@@ -282,41 +373,26 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		_handle_touch_drag(drag.index, drag.position)
-	elif event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.pressed:
-				_handle_touch_down(999, mb.position)
-			else:
-				_handle_touch_up(999)
-	elif event is InputEventMouseMotion:
-		var mm := event as InputEventMouseMotion
-		if (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
-			_handle_touch_drag(999, mm.position)
 
 func _handle_touch_down(index: int, pos: Vector2) -> void:
-	var vp_size = _get_viewport_size()
-	
 	# 1. Jump Button Hit-Test
 	if is_instance_valid(jump_btn) and jump_btn.get_global_rect().has_point(pos):
 		_jump_touch_id = index
-		Input.action_press("p1_jump")
-		_pulse_button(jump_btn, true)
+		_on_jump_down()
 		return
 	
 	# 2. Boost Button Hit-Test
 	if is_instance_valid(boost_btn) and boost_btn.get_global_rect().has_point(pos):
 		_boost_touch_id = index
-		Input.action_press("p1_boost")
-		_pulse_button(boost_btn, true)
+		_on_boost_down()
 		return
 
-	# 3. Joystick: Beliebiger Touch in der linken Bildschirmhälfte
-	if pos.x < vp_size.x * 0.5 and _joystick_touch_id == -1:
-		_joystick_touch_id = index
-		_joystick_center = pos
+	# 3. Joystick
+	_joystick_touch_id = index
+	_joystick_center = pos
+	if is_instance_valid(joystick_base):
 		joystick_base.position = _joystick_center - Vector2(joystick_radius, joystick_radius)
-		_update_joystick(pos)
+	_update_joystick(pos)
 
 func _handle_touch_drag(index: int, pos: Vector2) -> void:
 	if index == _joystick_touch_id:
@@ -328,12 +404,10 @@ func _handle_touch_up(index: int) -> void:
 		_reset_joystick()
 	elif index == _jump_touch_id:
 		_jump_touch_id = -1
-		Input.action_release("p1_jump")
-		_pulse_button(jump_btn, false)
+		_on_jump_up()
 	elif index == _boost_touch_id:
 		_boost_touch_id = -1
-		Input.action_release("p1_boost")
-		_pulse_button(boost_btn, false)
+		_on_boost_up()
 
 func _update_joystick(pos: Vector2) -> void:
 	var diff = pos - _joystick_center
@@ -342,7 +416,8 @@ func _update_joystick(pos: Vector2) -> void:
 		diff = diff.normalized() * joystick_radius
 	
 	var knob_rad = 32.0
-	joystick_knob.position = (diff + Vector2(joystick_radius, joystick_radius)) - Vector2(knob_rad, knob_rad)
+	if is_instance_valid(joystick_knob):
+		joystick_knob.position = (diff + Vector2(joystick_radius, joystick_radius)) - Vector2(knob_rad, knob_rad)
 	
 	var raw_vec = diff / joystick_radius
 	if raw_vec.length() < deadzone:
