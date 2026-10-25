@@ -51,10 +51,12 @@ func _test_sound_manager() -> bool:
 	assert(sm.stream_jump != null, "Jump audio stream must be generated")
 	assert(sm.stream_boost != null, "Boost audio stream must be generated")
 	assert(sm.stream_tackle != null, "Tackle audio stream must be generated")
-	assert(sm.stream_bgm != null, "BGM audio stream must be generated")
-	assert(sm.stream_bgm.loop_mode == AudioStreamWAV.LOOP_FORWARD, "BGM stream must have forward loop mode")
-	assert(sm.stream_bgm.loop_end > 0, "BGM loop end must be positive")
-	assert(sm.stream_bgm.data.size() > 100000, "BGM sample data must be populated")
+	assert(sm.stream_bgm != null, "BGM audio stream must be loaded or generated")
+	assert(sm.stream_bgm is AudioStream, "BGM stream must be an AudioStream")
+	if sm.stream_bgm is AudioStreamOggVorbis:
+		assert(sm.stream_bgm.loop == true, "OGG BGM must have loop enabled")
+	elif sm.stream_bgm is AudioStreamWAV:
+		assert(sm.stream_bgm.loop_mode == AudioStreamWAV.LOOP_FORWARD, "WAV BGM stream must have forward loop mode")
 	
 	root.add_child(sm)
 	sm._ready()

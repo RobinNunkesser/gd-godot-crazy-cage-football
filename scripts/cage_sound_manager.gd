@@ -15,7 +15,7 @@ var stream_goal: AudioStreamWAV
 var stream_jump: AudioStreamWAV
 var stream_boost: AudioStreamWAV
 var stream_tackle: AudioStreamWAV
-var stream_bgm: AudioStreamWAV
+var stream_bgm: AudioStream
 
 var _players: Array[AudioStreamPlayer] = []
 var _pool_size: int = 10
@@ -193,7 +193,16 @@ func _synthesize_all_sounds() -> void:
 	stream_jump = _generate_jump_wav()
 	stream_boost = _generate_boost_wav()
 	stream_tackle = _generate_tackle_wav()
-	stream_bgm = _generate_bgm_wav()
+	
+	# Juhani Junkala [Retro Game Music Pack] "Level 1" (Action) via OpenGameArt (CC0 1.0 Universal)
+	# Behält prozeduralen Chiptune-Synthesizer als zuverlässigen Fallback.
+	var bgm_path = "res://audio/music_action_level1.ogg"
+	if ResourceLoader.exists(bgm_path):
+		var res = load(bgm_path)
+		if res is AudioStream:
+			stream_bgm = res
+	if not stream_bgm:
+		stream_bgm = _generate_bgm_wav()
 
 func _generate_kick_wav() -> AudioStreamWAV:
 	var mix_rate = 22050

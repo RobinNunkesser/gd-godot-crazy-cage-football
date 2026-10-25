@@ -37,6 +37,14 @@ Zwei rollende, elastische Kugel-Spieler mit Comic-Augen treten in einem geschlos
 
 ---
 
+## 🎵 Musik & Audio-Attribution
+
+- **Hintergrundmusik:** *"Level 1"* aus der Sammlung *"5 Chiptunes (Action)"* von **Juhani Junkala (SubspaceAudio)** via OpenGameArt ([CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)).
+- **Fallback-Synthese:** Eingebauter prozeduraler 16-Bit-Chiptune-Synthesizer in `scripts/cage_sound_manager.gd`.
+- **Musik-Steuerung:** Mit Taste `[M]` kann die Musik jederzeit im Spiel und in der Lobby stummgeschaltet bzw. reaktiviert werden. Bei Torerfolg wird die BGM automatisch kurz geduckt.
+
+---
+
 ## 🧪 Headless CI/CD & Unit Tests
 
 Das Spiel verfügt über einen vollständig headless lauffähigen Test-Runner:
