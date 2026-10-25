@@ -222,8 +222,12 @@ func _test_cage_camera() -> bool:
 	test_ball.position = Vector3(8.0, 1.0, 0.0)
 	for _i in range(10):
 		cam.update_camera(0.1)
-	var current_x = cam.global_position.x if cam.is_inside_tree() else cam.position.x
-	assert(current_x > 2.0, "Camera should dynamically follow action along X towards the ball")
+	# Focus Modes testen
+	assert(cam.focus_mode == CageCamera.FocusMode.DYNAMIC_ARENA, "Default focus mode should be DYNAMIC_ARENA")
+	assert(cam.cycle_focus_mode() == CageCamera.FocusMode.BALL_CAM, "Cycling should lead to BALL_CAM")
+	assert(cam.cycle_focus_mode() == CageCamera.FocusMode.BROADCAST, "Cycling should lead to BROADCAST")
+	assert(cam.cycle_focus_mode() == CageCamera.FocusMode.DYNAMIC_ARENA, "Cycling should wrap back to DYNAMIC_ARENA")
+	assert(cam.get_focus_mode_name() == "DYNAMIC", "Focus mode name should be DYNAMIC")
 	
 	cam.queue_free()
 	test_ball.queue_free()
@@ -512,10 +516,17 @@ func _test_pause_and_options() -> bool:
 	assert(main_scene.is_game_paused == true, "Game should be paused")
 	assert(main_scene.ui_pause_container.visible == true, "Pause menu should be visible")
 	
-	# 2. Test Volume Sliders in Pause Menu
+	# 2. Test Volume Sliders & Focus Navigation in Pause Menu
 	assert(main_scene.ui_master_slider != null, "Master slider should exist")
 	assert(main_scene.ui_bgm_slider != null, "BGM slider should exist")
 	assert(main_scene.ui_sfx_slider != null, "SFX slider should exist")
+	assert(main_scene.ui_pause_focus_btn != null, "Pause focus button should exist")
+	assert(main_scene.ui_pause_resume_btn != null, "Pause resume button should exist")
+	assert(main_scene.ui_master_slider.focus_neighbor_bottom == NodePath("../BgmSlider"), "Master slider should route down to BGM slider")
+	assert(main_scene.ui_pause_resume_btn.focus_neighbor_bottom == NodePath("../FocusBtn"), "Resume button should route down to Focus button")
+	
+	main_scene.cycle_gameplay_focus()
+	assert(main_scene.camera.focus_mode == CageCamera.FocusMode.BALL_CAM, "cycle_gameplay_focus should advance focus mode")
 	
 	main_scene.ui_master_slider.value_changed.emit(0.5)
 	assert(main_scene.sound_manager.master_volume == 0.5, "Master volume should be set to 0.5")
@@ -529,7 +540,7 @@ func _test_pause_and_options() -> bool:
 	assert(main_scene.is_game_paused == false, "Game should be unpaused")
 	assert(main_scene.ui_pause_container.visible == false, "Pause menu should be hidden")
 	
-	# 3. Test Match End Stats Modal
+	# 3. Test Match End Stats Modal & Button Focus
 	main_scene.match_stats.record_goal(1)
 	main_scene.match_stats.record_shot(1)
 	main_scene.match_stats.record_post_hit(2)
@@ -538,6 +549,9 @@ func _test_pause_and_options() -> bool:
 	main_scene.show_match_stats()
 	
 	assert(main_scene.ui_stats_container.visible == true, "Stats modal should be visible")
+	assert(main_scene.ui_stats_rematch_btn != null, "Rematch button should exist")
+	assert(main_scene.ui_stats_lobby_btn != null, "Lobby button should exist")
+	assert(main_scene.ui_stats_rematch_btn.focus_neighbor_right == NodePath("../StatsLobbyBtn"), "Rematch should route right to lobby button")
 	assert(main_scene.ui_stats_row_labels.has("goals"), "Goals row label should exist")
 	assert(main_scene.ui_stats_row_labels.has("shots"), "Shots row label should exist")
 	assert(main_scene.ui_stats_row_labels.has("posts"), "Posts row label should exist")

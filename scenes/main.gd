@@ -79,6 +79,7 @@ var ui_bgm_slider: HSlider
 var ui_sfx_slider: HSlider
 var ui_pause_resume_btn: Button
 var ui_pause_restart_btn: Button
+var ui_pause_focus_btn: Button
 var ui_pause_theme_btn: Button
 var ui_pause_lang_btn: Button
 var ui_pause_fs_btn: Button
@@ -87,6 +88,7 @@ var ui_pause_ctrl_title_lbl: Label
 var ui_pause_ctrl_p1_lbl: Label
 var ui_pause_ctrl_p2_lbl: Label
 var ui_pause_ctrl_gp_lbl: Label
+var ui_pause_ctrl_focus_lbl: Label
 
 # Match End Stats Menu
 var ui_stats_container: Control
@@ -828,13 +830,15 @@ func _build_ui() -> void:
 	
 	_update_lobby_ui()
 	canvas.add_child(ui_lobby_panel)
+	add_child(canvas)
 	_build_pause_menu(canvas)
 	_build_stats_menu(canvas)
-	add_child(canvas)
+	_setup_focus_routing()
 
 func _create_styled_button(text: String, font_size: int = 18, bg_col: Color = Color(0.14, 0.20, 0.32, 0.95)) -> Button:
 	var btn = Button.new()
 	btn.text = text
+	btn.focus_mode = Control.FOCUS_ALL
 	btn.add_theme_font_size_override("font_size", font_size)
 	var normal_sb = StyleBoxFlat.new()
 	normal_sb.bg_color = bg_col
@@ -854,7 +858,20 @@ func _create_styled_button(text: String, font_size: int = 18, bg_col: Color = Co
 	hover_sb.border_color = Color(0.5, 0.85, 1.0, 1.0)
 	btn.add_theme_stylebox_override("hover", hover_sb)
 	btn.add_theme_stylebox_override("pressed", hover_sb)
-	btn.add_theme_stylebox_override("focus", hover_sb)
+	
+	var focus_sb = normal_sb.duplicate() as StyleBoxFlat
+	focus_sb.bg_color = bg_col.lightened(0.20)
+	focus_sb.border_color = Color(1.0, 0.88, 0.25, 1.0)
+	focus_sb.border_width_left = 3
+	focus_sb.border_width_top = 3
+	focus_sb.border_width_right = 3
+	focus_sb.border_width_bottom = 3
+	btn.add_theme_stylebox_override("focus", focus_sb)
+	
+	btn.focus_entered.connect(func():
+		if sound_manager:
+			sound_manager.play_ui_click()
+	)
 	return btn
 
 func _build_pause_menu(canvas: CanvasLayer) -> void:
@@ -869,8 +886,8 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_pause_container.add_child(backdrop)
 	
 	var panel = Panel.new()
-	panel.position = Vector2(300, 70)
-	panel.size = Vector2(680, 580)
+	panel.position = Vector2(300, 50)
+	panel.size = Vector2(680, 620)
 	var sb = StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.11, 0.18, 0.96)
 	sb.border_width_left = 3
@@ -917,6 +934,11 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_master_slider.max_value = 1.0
 	ui_master_slider.step = 0.05
 	ui_master_slider.value = 1.0
+	ui_master_slider.focus_mode = Control.FOCUS_ALL
+	ui_master_slider.focus_entered.connect(func():
+		if sound_manager:
+			sound_manager.play_ui_click()
+	)
 	ui_master_slider.value_changed.connect(func(val: float):
 		if sound_manager:
 			sound_manager.set_master_volume(val)
@@ -937,6 +959,11 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_bgm_slider.max_value = 1.0
 	ui_bgm_slider.step = 0.05
 	ui_bgm_slider.value = 0.75
+	ui_bgm_slider.focus_mode = Control.FOCUS_ALL
+	ui_bgm_slider.focus_entered.connect(func():
+		if sound_manager:
+			sound_manager.play_ui_click()
+	)
 	ui_bgm_slider.value_changed.connect(func(val: float):
 		if sound_manager:
 			sound_manager.set_bgm_volume(val)
@@ -957,6 +984,11 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_sfx_slider.max_value = 1.0
 	ui_sfx_slider.step = 0.05
 	ui_sfx_slider.value = 1.0
+	ui_sfx_slider.focus_mode = Control.FOCUS_ALL
+	ui_sfx_slider.focus_entered.connect(func():
+		if sound_manager:
+			sound_manager.play_ui_click()
+	)
 	ui_sfx_slider.value_changed.connect(func(val: float):
 		if sound_manager:
 			sound_manager.set_sfx_volume(val)
@@ -966,9 +998,9 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	
 	_update_volume_labels()
 	
-	var btn_y = 235
+	var btn_y = 228
 	var bw = 285
-	var bh = 42
+	var bh = 40
 	
 	ui_pause_resume_btn = _create_styled_button(tr("PAUSE_RESUME"), 17, Color(0.12, 0.28, 0.22, 0.95))
 	ui_pause_resume_btn.position = Vector2(40, btn_y)
@@ -987,8 +1019,16 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	)
 	panel.add_child(ui_pause_restart_btn)
 	
+	ui_pause_focus_btn = _create_styled_button("📷 [F] FOKUS", 16, Color(0.12, 0.22, 0.32, 0.95))
+	ui_pause_focus_btn.position = Vector2(40, btn_y + 46)
+	ui_pause_focus_btn.size = Vector2(bw, bh)
+	ui_pause_focus_btn.pressed.connect(func():
+		cycle_gameplay_focus()
+	)
+	panel.add_child(ui_pause_focus_btn)
+	
 	ui_pause_theme_btn = _create_styled_button("🏟️ [T] ARENA", 16)
-	ui_pause_theme_btn.position = Vector2(40, btn_y + 50)
+	ui_pause_theme_btn.position = Vector2(350, btn_y + 46)
 	ui_pause_theme_btn.size = Vector2(bw, bh)
 	ui_pause_theme_btn.pressed.connect(func():
 		cycle_arena_theme()
@@ -997,7 +1037,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	panel.add_child(ui_pause_theme_btn)
 	
 	ui_pause_lang_btn = _create_styled_button("🌐 [L] DE / EN", 16)
-	ui_pause_lang_btn.position = Vector2(350, btn_y + 50)
+	ui_pause_lang_btn.position = Vector2(40, btn_y + 92)
 	ui_pause_lang_btn.size = Vector2(bw, bh)
 	ui_pause_lang_btn.pressed.connect(func():
 		toggle_language()
@@ -1006,7 +1046,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	panel.add_child(ui_pause_lang_btn)
 	
 	ui_pause_fs_btn = _create_styled_button("🖥️ [F11] VOLLBILD", 16)
-	ui_pause_fs_btn.position = Vector2(40, btn_y + 100)
+	ui_pause_fs_btn.position = Vector2(350, btn_y + 92)
 	ui_pause_fs_btn.size = Vector2(bw, bh)
 	ui_pause_fs_btn.pressed.connect(func():
 		toggle_fullscreen()
@@ -1015,8 +1055,8 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	panel.add_child(ui_pause_fs_btn)
 	
 	ui_pause_lobby_btn = _create_styled_button(tr("PAUSE_LOBBY"), 16, Color(0.25, 0.10, 0.10, 0.95))
-	ui_pause_lobby_btn.position = Vector2(350, btn_y + 100)
-	ui_pause_lobby_btn.size = Vector2(bw, bh)
+	ui_pause_lobby_btn.position = Vector2(160, btn_y + 138)
+	ui_pause_lobby_btn.size = Vector2(360, bh)
 	ui_pause_lobby_btn.pressed.connect(func():
 		toggle_pause()
 		return_to_lobby()
@@ -1026,7 +1066,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_pause_ctrl_title_lbl = Label.new()
 	ui_pause_ctrl_title_lbl.text = tr("CONTROLS_TITLE")
 	ui_pause_ctrl_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ui_pause_ctrl_title_lbl.position = Vector2(20, 395)
+	ui_pause_ctrl_title_lbl.position = Vector2(20, 420)
 	ui_pause_ctrl_title_lbl.size = Vector2(640, 24)
 	ui_pause_ctrl_title_lbl.add_theme_font_size_override("font_size", 15)
 	ui_pause_ctrl_title_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
@@ -1035,7 +1075,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_pause_ctrl_p1_lbl = Label.new()
 	ui_pause_ctrl_p1_lbl.text = tr("CONTROLS_P1")
 	ui_pause_ctrl_p1_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ui_pause_ctrl_p1_lbl.position = Vector2(20, 424)
+	ui_pause_ctrl_p1_lbl.position = Vector2(20, 448)
 	ui_pause_ctrl_p1_lbl.size = Vector2(640, 22)
 	ui_pause_ctrl_p1_lbl.add_theme_font_size_override("font_size", 14)
 	panel.add_child(ui_pause_ctrl_p1_lbl)
@@ -1043,7 +1083,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_pause_ctrl_p2_lbl = Label.new()
 	ui_pause_ctrl_p2_lbl.text = tr("CONTROLS_P2")
 	ui_pause_ctrl_p2_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ui_pause_ctrl_p2_lbl.position = Vector2(20, 448)
+	ui_pause_ctrl_p2_lbl.position = Vector2(20, 472)
 	ui_pause_ctrl_p2_lbl.size = Vector2(640, 22)
 	ui_pause_ctrl_p2_lbl.add_theme_font_size_override("font_size", 14)
 	panel.add_child(ui_pause_ctrl_p2_lbl)
@@ -1051,10 +1091,18 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	ui_pause_ctrl_gp_lbl = Label.new()
 	ui_pause_ctrl_gp_lbl.text = tr("CONTROLS_GAMEPAD")
 	ui_pause_ctrl_gp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ui_pause_ctrl_gp_lbl.position = Vector2(20, 472)
+	ui_pause_ctrl_gp_lbl.position = Vector2(20, 496)
 	ui_pause_ctrl_gp_lbl.size = Vector2(640, 22)
 	ui_pause_ctrl_gp_lbl.add_theme_font_size_override("font_size", 14)
 	panel.add_child(ui_pause_ctrl_gp_lbl)
+	
+	ui_pause_ctrl_focus_lbl = Label.new()
+	ui_pause_ctrl_focus_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_pause_ctrl_focus_lbl.position = Vector2(20, 520)
+	ui_pause_ctrl_focus_lbl.size = Vector2(640, 22)
+	ui_pause_ctrl_focus_lbl.add_theme_font_size_override("font_size", 14)
+	ui_pause_ctrl_focus_lbl.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+	panel.add_child(ui_pause_ctrl_focus_lbl)
 	
 	canvas.add_child(ui_pause_container)
 
@@ -1210,8 +1258,80 @@ func _build_stats_menu(canvas: CanvasLayer) -> void:
 		return_to_lobby()
 	)
 	panel.add_child(ui_stats_lobby_btn)
-	
 	canvas.add_child(ui_stats_container)
+
+func _setup_focus_routing() -> void:
+	if is_instance_valid(ui_master_slider):
+		ui_master_slider.name = "MasterSlider"
+	if is_instance_valid(ui_bgm_slider):
+		ui_bgm_slider.name = "BgmSlider"
+	if is_instance_valid(ui_sfx_slider):
+		ui_sfx_slider.name = "SfxSlider"
+	if is_instance_valid(ui_pause_resume_btn):
+		ui_pause_resume_btn.name = "ResumeBtn"
+	if is_instance_valid(ui_pause_restart_btn):
+		ui_pause_restart_btn.name = "RestartBtn"
+	if is_instance_valid(ui_pause_focus_btn):
+		ui_pause_focus_btn.name = "FocusBtn"
+	if is_instance_valid(ui_pause_theme_btn):
+		ui_pause_theme_btn.name = "ThemeBtn"
+	if is_instance_valid(ui_pause_lang_btn):
+		ui_pause_lang_btn.name = "LangBtn"
+	if is_instance_valid(ui_pause_fs_btn):
+		ui_pause_fs_btn.name = "FsBtn"
+	if is_instance_valid(ui_pause_lobby_btn):
+		ui_pause_lobby_btn.name = "LobbyBtn"
+
+	if is_instance_valid(ui_master_slider) and is_instance_valid(ui_pause_lobby_btn):
+		ui_master_slider.focus_neighbor_top = NodePath("../LobbyBtn")
+		ui_master_slider.focus_neighbor_bottom = NodePath("../BgmSlider")
+		
+		ui_bgm_slider.focus_neighbor_top = NodePath("../MasterSlider")
+		ui_bgm_slider.focus_neighbor_bottom = NodePath("../SfxSlider")
+		
+		ui_sfx_slider.focus_neighbor_top = NodePath("../BgmSlider")
+		ui_sfx_slider.focus_neighbor_bottom = NodePath("../ResumeBtn")
+		
+		ui_pause_resume_btn.focus_neighbor_top = NodePath("../SfxSlider")
+		ui_pause_resume_btn.focus_neighbor_bottom = NodePath("../FocusBtn")
+		ui_pause_resume_btn.focus_neighbor_right = NodePath("../RestartBtn")
+		ui_pause_resume_btn.focus_neighbor_left = NodePath("../RestartBtn")
+		
+		ui_pause_restart_btn.focus_neighbor_top = NodePath("../SfxSlider")
+		ui_pause_restart_btn.focus_neighbor_bottom = NodePath("../ThemeBtn")
+		ui_pause_restart_btn.focus_neighbor_left = NodePath("../ResumeBtn")
+		ui_pause_restart_btn.focus_neighbor_right = NodePath("../ResumeBtn")
+		
+		ui_pause_focus_btn.focus_neighbor_top = NodePath("../ResumeBtn")
+		ui_pause_focus_btn.focus_neighbor_bottom = NodePath("../LangBtn")
+		ui_pause_focus_btn.focus_neighbor_right = NodePath("../ThemeBtn")
+		ui_pause_focus_btn.focus_neighbor_left = NodePath("../ThemeBtn")
+		
+		ui_pause_theme_btn.focus_neighbor_top = NodePath("../RestartBtn")
+		ui_pause_theme_btn.focus_neighbor_bottom = NodePath("../FsBtn")
+		ui_pause_theme_btn.focus_neighbor_left = NodePath("../FocusBtn")
+		ui_pause_theme_btn.focus_neighbor_right = NodePath("../FocusBtn")
+		
+		ui_pause_lang_btn.focus_neighbor_top = NodePath("../FocusBtn")
+		ui_pause_lang_btn.focus_neighbor_bottom = NodePath("../LobbyBtn")
+		ui_pause_lang_btn.focus_neighbor_right = NodePath("../FsBtn")
+		ui_pause_lang_btn.focus_neighbor_left = NodePath("../FsBtn")
+		
+		ui_pause_fs_btn.focus_neighbor_top = NodePath("../ThemeBtn")
+		ui_pause_fs_btn.focus_neighbor_bottom = NodePath("../LobbyBtn")
+		ui_pause_fs_btn.focus_neighbor_left = NodePath("../LangBtn")
+		ui_pause_fs_btn.focus_neighbor_right = NodePath("../LangBtn")
+		
+		ui_pause_lobby_btn.focus_neighbor_top = NodePath("../LangBtn")
+		ui_pause_lobby_btn.focus_neighbor_bottom = NodePath("../MasterSlider")
+
+	if is_instance_valid(ui_stats_rematch_btn) and is_instance_valid(ui_stats_lobby_btn):
+		ui_stats_rematch_btn.name = "RematchBtn"
+		ui_stats_lobby_btn.name = "StatsLobbyBtn"
+		ui_stats_rematch_btn.focus_neighbor_right = NodePath("../StatsLobbyBtn")
+		ui_stats_rematch_btn.focus_neighbor_left = NodePath("../StatsLobbyBtn")
+		ui_stats_lobby_btn.focus_neighbor_left = NodePath("../RematchBtn")
+		ui_stats_lobby_btn.focus_neighbor_right = NodePath("../RematchBtn")
 
 func _update_volume_labels() -> void:
 	if ui_master_lbl and ui_master_slider:
@@ -1239,6 +1359,20 @@ func _update_pause_buttons_text() -> void:
 		var mode = DisplayServer.window_get_mode()
 		var is_fs = (mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 		ui_pause_fs_btn.text = "🖥️ [F11] " + (tr("FULLSCREEN_ON") if is_fs else tr("FULLSCREEN_OFF"))
+	if ui_pause_focus_btn and is_instance_valid(camera):
+		var fname = ""
+		match camera.focus_mode:
+			CageCamera.FocusMode.DYNAMIC_ARENA:
+				fname = tr("FOCUS_MODE_DYNAMIC")
+			CageCamera.FocusMode.BALL_CAM:
+				fname = tr("FOCUS_MODE_BALL")
+			CageCamera.FocusMode.BROADCAST:
+				fname = tr("FOCUS_MODE_BROADCAST")
+		var fmt = tr("FOCUS_BTN")
+		if "%s" in fmt:
+			ui_pause_focus_btn.text = fmt % fname
+		else:
+			ui_pause_focus_btn.text = "📷 [F] " + fname
 	if ui_pause_ctrl_title_lbl:
 		ui_pause_ctrl_title_lbl.text = tr("CONTROLS_TITLE")
 	if ui_pause_ctrl_p1_lbl:
@@ -1247,10 +1381,37 @@ func _update_pause_buttons_text() -> void:
 		ui_pause_ctrl_p2_lbl.text = tr("CONTROLS_P2")
 	if ui_pause_ctrl_gp_lbl:
 		ui_pause_ctrl_gp_lbl.text = tr("CONTROLS_GAMEPAD")
+	if ui_pause_ctrl_focus_lbl:
+		ui_pause_ctrl_focus_lbl.text = "📷 [F] / [Gamepad Y]: " + tr("FOCUS_MODE_DYNAMIC") + " / " + tr("FOCUS_MODE_BALL") + " / " + tr("FOCUS_MODE_BROADCAST")
 	if ui_pause_title_lbl:
 		ui_pause_title_lbl.text = tr("PAUSE_TITLE")
 	if ui_pause_options_title_lbl:
 		ui_pause_options_title_lbl.text = tr("OPTIONS_TITLE")
+
+func cycle_gameplay_focus() -> void:
+	if not is_instance_valid(camera):
+		return
+	var new_mode = camera.cycle_focus_mode()
+	var mode_name = ""
+	match new_mode:
+		CageCamera.FocusMode.DYNAMIC_ARENA:
+			mode_name = tr("FOCUS_MODE_DYNAMIC")
+		CageCamera.FocusMode.BALL_CAM:
+			mode_name = tr("FOCUS_MODE_BALL")
+		CageCamera.FocusMode.BROADCAST:
+			mode_name = tr("FOCUS_MODE_BROADCAST")
+	if sound_manager:
+		sound_manager.play_ui_click()
+	_update_pause_buttons_text()
+	if ui_banner_label:
+		ui_banner_label.visible = true
+		ui_banner_label.text = mode_name
+		var tween = create_tween()
+		tween.tween_interval(1.2)
+		tween.tween_callback(func():
+			if is_instance_valid(ui_banner_label) and (state_manager.current_state == CageStateManager.MatchState.PLAYING or state_manager.current_state == CageStateManager.MatchState.LOBBY):
+				ui_banner_label.visible = false
+		)
 
 func toggle_pause() -> void:
 	if state_manager.current_state == CageStateManager.MatchState.LOBBY or state_manager.current_state == CageStateManager.MatchState.MATCH_OVER:
@@ -1261,6 +1422,8 @@ func toggle_pause() -> void:
 		if is_game_paused:
 			_update_volume_labels()
 			_update_pause_buttons_text()
+			if is_instance_valid(ui_pause_resume_btn) and ui_pause_resume_btn.is_inside_tree():
+				ui_pause_resume_btn.grab_focus()
 	for p in players:
 		p.freeze = is_game_paused
 	if ball:
@@ -1324,6 +1487,8 @@ func show_match_stats() -> void:
 	
 	ui_stats_container.visible = true
 	ui_stats_container.modulate.a = 0.0
+	if is_instance_valid(ui_stats_rematch_btn) and ui_stats_rematch_btn.is_inside_tree():
+		ui_stats_rematch_btn.grab_focus()
 	var tween = create_tween()
 	tween.tween_property(ui_stats_container, "modulate:a", 1.0, 0.3)
 
@@ -1447,6 +1612,50 @@ func _update_score_label() -> void:
 		ui_score_label.text = "RED  %d : %d  BLUE" % [state_manager.scores[1], state_manager.scores[2]]
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventJoypadButton and event.pressed:
+		match event.button_index:
+			JOY_BUTTON_START:
+				if ui_stats_container and ui_stats_container.visible:
+					if sound_manager:
+						sound_manager.play_ui_click()
+					ui_stats_container.visible = false
+					restart_game()
+					return
+				elif state_manager.current_state == CageStateManager.MatchState.LOBBY:
+					start_match_from_lobby()
+					return
+				else:
+					toggle_pause()
+					return
+			JOY_BUTTON_B:
+				if ui_stats_container and ui_stats_container.visible:
+					if sound_manager:
+						sound_manager.play_ui_click()
+					ui_stats_container.visible = false
+					return_to_lobby()
+					return
+				elif is_game_paused:
+					toggle_pause()
+					return
+			JOY_BUTTON_Y:
+				cycle_gameplay_focus()
+				return
+			JOY_BUTTON_X:
+				if state_manager.current_state == CageStateManager.MatchState.LOBBY:
+					toggle_powerups()
+				elif not is_game_paused and state_manager.current_state == CageStateManager.MatchState.PLAYING:
+					toggle_powerups()
+				return
+			JOY_BUTTON_BACK:
+				toggle_pause()
+				return
+			JOY_BUTTON_LEFT_SHOULDER:
+				cycle_gameplay_focus()
+				return
+			JOY_BUTTON_RIGHT_SHOULDER:
+				cycle_arena_theme()
+				return
+
 	if event is InputEventKey and event.pressed and not event.echo:
 		if ui_stats_container and ui_stats_container.visible:
 			if event.keycode == KEY_R:
@@ -1474,6 +1683,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_pause()
 				return_to_lobby()
 				return
+			elif event.keycode == KEY_F:
+				cycle_gameplay_focus()
+				return
 			elif event.keycode == KEY_T:
 				cycle_arena_theme()
 				_update_pause_buttons_text()
@@ -1494,6 +1706,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		elif event.keycode == KEY_F11:
 			toggle_fullscreen()
+			return
+		elif event.keycode == KEY_F:
+			cycle_gameplay_focus()
 			return
 		elif event.keycode == KEY_T:
 			cycle_arena_theme()

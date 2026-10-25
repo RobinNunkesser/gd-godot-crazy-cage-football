@@ -71,3 +71,7 @@ CONTROLS_TITLE,STEUERUNGS-REFERENZ,CONTROLS REFERENCE
 CONTROLS_P1,"P1: WASD + Space (Sprung) + Shift (Boost)","P1: WASD + Space (Jump) + Shift (Boost)"
 CONTROLS_P2,"P2: Pfeile + Enter (Sprung) + Strg (Boost)","P2: Arrows + Enter (Jump) + Ctrl (Boost)"
 CONTROLS_GAMEPAD,"Gamepad: Analogstick + A/Kreuz + X/Viereck","Gamepad: Analog Stick + A/Cross + X/Square"
+FOCUS_MODE_DYNAMIC,KAMERA: DYNAMISCH,CAMERA: DYNAMIC
+FOCUS_MODE_BALL,KAMERA: BALL-FOKUS,CAMERA: BALL FOCUS
+FOCUS_MODE_BROADCAST,KAMERA: WEITWINKEL (BROADCAST),CAMERA: WIDE (BROADCAST)
+FOCUS_BTN,"📷 [F] FOKUS: %s","📷 [F] FOCUS: %s"

@@ -3,6 +3,13 @@ extends Camera3D
 
 const CageConfig = preload("res://scripts/config.gd")
 
+enum FocusMode {
+	DYNAMIC_ARENA,
+	BALL_CAM,
+	BROADCAST
+}
+
+@export var focus_mode: FocusMode = FocusMode.DYNAMIC_ARENA
 @export var ball_node: Node3D = null
 @export var player1_node: Node3D = null
 @export var player2_node: Node3D = null
@@ -18,6 +25,20 @@ var _noise_timer: float = 0.0
 
 func add_trauma(amount: float) -> void:
 	trauma = clampf(trauma + amount, 0.0, 1.0)
+
+func cycle_focus_mode() -> FocusMode:
+	focus_mode = ((int(focus_mode) + 1) % 3) as FocusMode
+	return focus_mode
+
+func get_focus_mode_name() -> String:
+	match focus_mode:
+		FocusMode.DYNAMIC_ARENA:
+			return "DYNAMIC"
+		FocusMode.BALL_CAM:
+			return "BALL-CAM"
+		FocusMode.BROADCAST:
+			return "BROADCAST"
+	return "DYNAMIC"
 
 func _init() -> void:
 	fov = 82.0
@@ -38,11 +59,37 @@ func update_camera(delta: float) -> void:
 	var action_pos = Vector3.ZERO
 	var weight_total = 0.0
 	
-	# 1. Hauptfokus: Ball
+	var ball_weight = 3.0
+	var player_weight = 1.0
+	var target_fov = 82.0
+	var extra_cam_y = 0.0
+	var extra_cam_z = 0.0
+	
+	match focus_mode:
+		FocusMode.BALL_CAM:
+			ball_weight = 6.0
+			player_weight = 0.2
+			target_fov = 75.0
+			extra_cam_y = -0.4
+			extra_cam_z = -0.8
+		FocusMode.BROADCAST:
+			ball_weight = 1.5
+			player_weight = 2.0
+			target_fov = 88.0
+			extra_cam_y = 1.4
+			extra_cam_z = 1.8
+		FocusMode.DYNAMIC_ARENA:
+			ball_weight = 3.0
+			player_weight = 1.0
+			target_fov = 82.0
+	
+	fov = lerpf(fov, target_fov, delta * 4.0)
+	
+	# 1. Ball Fokus
 	if is_instance_valid(ball_node):
 		var bpos = ball_node.global_position if (is_inside_tree() and ball_node.is_inside_tree()) else ball_node.position
-		action_pos += bpos * 3.0
-		weight_total += 3.0
+		action_pos += bpos * ball_weight
+		weight_total += ball_weight
 	
 	# 2. Spielgeschehen: Aktive Spieler um den Ball
 	var candidates: Array[Node3D] = []
@@ -64,16 +111,16 @@ func update_camera(delta: float) -> void:
 	
 	if active_count > 0:
 		players_mid /= float(active_count)
-		action_pos += players_mid * 1.0
-		weight_total += 1.0
+		action_pos += players_mid * player_weight
+		weight_total += player_weight
 	
 	if weight_total > 0.0:
 		action_pos /= weight_total
 	
 	# 3. Positionierung: Mehr Distanz, dynamisches Mitziehen entlang X
 	var cam_x = clampf(action_pos.x * 0.70, -CageConfig.CAGE_WIDTH_X * 0.35, CageConfig.CAGE_WIDTH_X * 0.35)
-	var cam_y = clampf(CageConfig.CAMERA_HEIGHT + action_pos.y * 0.20, 4.2, CageConfig.CAGE_HEIGHT_Y - 1.2)
-	var cam_z = clampf(CageConfig.CAMERA_OFFSET_Z + action_pos.z * 0.15, 5.0, CageConfig.CAGE_DEPTH_Z * 0.5 - 0.8)
+	var cam_y = clampf(CageConfig.CAMERA_HEIGHT + action_pos.y * 0.20 + extra_cam_y, 3.8, CageConfig.CAGE_HEIGHT_Y - 0.8)
+	var cam_z = clampf(CageConfig.CAMERA_OFFSET_Z + action_pos.z * 0.15 + extra_cam_z, 4.5, CageConfig.CAGE_DEPTH_Z * 0.5 + 2.0)
 	var desired_pos = Vector3(cam_x, cam_y, cam_z)
 	
 	# 4. Blickpunkt folgt dem Spielgeschehen
