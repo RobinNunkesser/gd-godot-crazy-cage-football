@@ -299,21 +299,42 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 		board_instances.append(board_inst)
 		body.add_child(board_inst)
 	
-	# 2. Drahtgitter-Käfigwand oberhalb der Bande
+	# 2. Drahtgitter-Käfigwand oberhalb der Bande (Einzelfläche / QuadMesh statt 40cm dicker Hohlkasten!)
 	var fence_height = size.y - board_height
 	var fence_inst = MeshInstance3D.new()
-	var fence_box = BoxMesh.new()
-	fence_box.size = Vector3(size.x, fence_height, size.z)
-	fence_inst.mesh = fence_box
+	var qm = QuadMesh.new()
+	var max_span = maxf(size.x, size.z)
+	var uv_scale = Vector3(max_span * 0.45, fence_height * 0.45, 1.0)
+	
+	if size.y <= CageConfig.WALL_THICKNESS + 0.05:
+		# Horizontale Deckenfläche (Ceiling / Tordach)
+		qm.size = Vector2(size.x, size.z)
+		fence_inst.mesh = qm
+		fence_inst.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+		fence_inst.position = Vector3(0.0, 0.0, 0.0)
+		uv_scale = Vector3(size.x * 0.45, size.z * 0.45, 1.0)
+	elif size.x <= CageConfig.WALL_THICKNESS + 0.05:
+		# Seitenwand entlang Z (LeftWall, RightWall, Flügelwände)
+		qm.size = Vector2(size.z, fence_height)
+		fence_inst.mesh = qm
+		fence_inst.rotation_degrees = Vector3(0.0, 90.0, 0.0)
+		fence_inst.position = Vector3(0.0, -size.y * 0.5 + board_height + fence_height * 0.5, 0.0)
+		uv_scale = Vector3(size.z * 0.45, fence_height * 0.45, 1.0)
+	else:
+		# Vorder-/Rückwand entlang X (BackWall, FrontWall, Seitennetze des Tors)
+		qm.size = Vector2(size.x, fence_height)
+		fence_inst.mesh = qm
+		fence_inst.rotation_degrees = Vector3.ZERO
+		fence_inst.position = Vector3(0.0, -size.y * 0.5 + board_height + fence_height * 0.5, 0.0)
+		uv_scale = Vector3(size.x * 0.45, fence_height * 0.45, 1.0)
+		
 	fence_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	fence_inst.position = Vector3(0, -size.y * 0.5 + board_height + fence_height * 0.5, 0)
 	
 	var mat = StandardMaterial3D.new()
 	var fence_path = "res://assets/textures/chainlink_fence.png"
 	if ResourceLoader.exists(fence_path):
 		mat.albedo_texture = load(fence_path)
-		var max_span = maxf(size.x, size.z)
-		mat.uv1_scale = Vector3(max_span * 0.45, fence_height * 0.45, 1.0)
+		mat.uv1_scale = uv_scale
 		mat.albedo_color = custom_color
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 		mat.alpha_scissor_threshold = 0.5
