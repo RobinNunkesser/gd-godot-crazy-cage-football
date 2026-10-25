@@ -862,7 +862,7 @@ func _build_ui() -> void:
 	ui_powerup_toggle_label.visible = false
 	ui_lobby_panel.add_child(ui_powerup_toggle_label)
 	
-	ui_lobby_theme_btn = _create_styled_button("🏟️ [T] ARENA", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_theme_btn = _create_styled_button("[T] ARENA", 16, Color(0.15, 0.20, 0.28, 0.95))
 	ui_lobby_theme_btn.name = "LobbyThemeBtn"
 	ui_lobby_theme_btn.position = Vector2(72, 478)
 	ui_lobby_theme_btn.size = Vector2(360, 44)
@@ -871,7 +871,7 @@ func _build_ui() -> void:
 	)
 	ui_lobby_panel.add_child(ui_lobby_theme_btn)
 	
-	ui_lobby_powerup_btn = _create_styled_button("⚡ [P] POWER-UPS", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_powerup_btn = _create_styled_button("[P] POWER-UPS", 16, Color(0.15, 0.20, 0.28, 0.95))
 	ui_lobby_powerup_btn.name = "LobbyPowerupBtn"
 	ui_lobby_powerup_btn.position = Vector2(460, 478)
 	ui_lobby_powerup_btn.size = Vector2(360, 44)
@@ -880,7 +880,7 @@ func _build_ui() -> void:
 	)
 	ui_lobby_panel.add_child(ui_lobby_powerup_btn)
 	
-	ui_lobby_focus_btn = _create_styled_button("📷 [F] KAMERA-FOKUS", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_focus_btn = _create_styled_button("[F] KAMERA-FOKUS", 16, Color(0.15, 0.20, 0.28, 0.95))
 	ui_lobby_focus_btn.name = "LobbyFocusBtn"
 	ui_lobby_focus_btn.position = Vector2(848, 478)
 	ui_lobby_focus_btn.size = Vector2(360, 44)
@@ -1238,7 +1238,7 @@ func _build_stats_menu(canvas: CanvasLayer) -> void:
 	
 	var th_y = 145
 	var th_red = Label.new()
-	th_red.text = "🔴 " + tr("TEAM_RED_LBL")
+	th_red.text = "[ROT] " + tr("TEAM_RED_LBL")
 	th_red.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	th_red.position = Vector2(30, th_y)
 	th_red.size = Vector2(200, 28)
@@ -1256,7 +1256,7 @@ func _build_stats_menu(canvas: CanvasLayer) -> void:
 	panel.add_child(th_mid)
 	
 	var th_blue = Label.new()
-	th_blue.text = "🔵 " + tr("TEAM_BLUE_LBL")
+	th_blue.text = "[BLAU] " + tr("TEAM_BLUE_LBL")
 	th_blue.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	th_blue.position = Vector2(570, th_y)
 	th_blue.size = Vector2(200, 28)
@@ -1688,26 +1688,26 @@ func _update_lobby_ui() -> void:
 		if i < ui_lobby_slot_team_btns.size():
 			var btn = ui_lobby_slot_team_btns[i]
 			var team_name = tr("TEAM_RED_LBL") if p.team_id == 1 else tr("TEAM_BLUE_LBL")
-			btn.text = ("🔴 " if p.team_id == 1 else "🔵 ") + team_name
+			btn.text = ("[ROT] " if p.team_id == 1 else "[BLAU] ") + team_name
 		if i < ui_lobby_slot_ctrl_btns.size():
 			var c_btn = ui_lobby_slot_ctrl_btns[i]
 			var mode_title = tr("BTN_CHANGE_MODE")
 			if "%s" in mode_title:
-				c_btn.text = "🎮 " + (mode_title % ("[%d]" % (i + 1)))
+				c_btn.text = "[MODUS] " + (mode_title % ("[%d]" % (i + 1)))
 			else:
-				c_btn.text = "🎮 " + mode_title
+				c_btn.text = "[MODUS] " + mode_title
 	
 	if ui_lobby_theme_btn and theme_manager:
 		var cur_theme = theme_manager.get_current_theme()
 		var dname = theme_manager.get_theme_display_name(cur_theme)
 		var btn_fmt = tr("LOBBY_THEME_BTN")
 		if not ("%s" in btn_fmt):
-			btn_fmt = "🏟️ [T] ARENA: %s"
+			btn_fmt = "[T] ARENA: %s"
 		ui_lobby_theme_btn.text = btn_fmt % dname
 	
 	if ui_lobby_powerup_btn:
 		var p_status = tr("POWERUPS_NOW_ON") if CageConfig.powerups_enabled else tr("POWERUPS_NOW_OFF")
-		ui_lobby_powerup_btn.text = "⚡ [P] " + p_status
+		ui_lobby_powerup_btn.text = "[P] " + p_status
 		
 	if ui_lobby_focus_btn and is_instance_valid(camera):
 		var fname = ""
@@ -1722,7 +1722,7 @@ func _update_lobby_ui() -> void:
 		if "%s" in fmt:
 			ui_lobby_focus_btn.text = fmt % fname
 		else:
-			ui_lobby_focus_btn.text = "📷 [F] " + fname
+			ui_lobby_focus_btn.text = "[F] " + fname
 			
 	if ui_lobby_start_btn:
 		ui_lobby_start_btn.text = tr("LOBBY_START_BTN")
@@ -1735,7 +1735,7 @@ func _update_lobby_ui() -> void:
 		var dname = theme_manager.get_theme_display_name(cur_theme)
 		var btn_fmt = tr("LOBBY_THEME_BTN")
 		if not ("%s" in btn_fmt):
-			btn_fmt = "🏟️ [T] ARENA: %s"
+			btn_fmt = "[T] ARENA: %s"
 		ui_theme_toggle_label.text = btn_fmt % dname
 	
 	if ui_powerup_toggle_label:

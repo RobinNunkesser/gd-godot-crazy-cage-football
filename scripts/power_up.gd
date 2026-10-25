@@ -29,15 +29,15 @@ func is_available() -> bool:
 static func get_short_title(t: CageConfig.PowerUpType) -> String:
 	match t:
 		CageConfig.PowerUpType.SUPER_SHOT:
-			return "🔥 " + TranslationServer.translate("PUP_SUPER_SHOT_NAME")
+			return "[SUPER-SHOT] " + TranslationServer.translate("PUP_SUPER_SHOT_NAME")
 		CageConfig.PowerUpType.SPEED_BOOTS:
-			return "⚡ " + TranslationServer.translate("PUP_SPEED_BOOTS_NAME")
+			return "[SPEED] " + TranslationServer.translate("PUP_SPEED_BOOTS_NAME")
 		CageConfig.PowerUpType.MAGNET_FOOT:
-			return "🧲 " + TranslationServer.translate("PUP_MAGNET_FOOT_NAME")
+			return "[MAGNET] " + TranslationServer.translate("PUP_MAGNET_FOOT_NAME")
 		CageConfig.PowerUpType.FREEZE_TACKLE:
-			return "❄️ " + TranslationServer.translate("PUP_FREEZE_TACKLE_NAME")
+			return "[FREEZE] " + TranslationServer.translate("PUP_FREEZE_TACKLE_NAME")
 		CageConfig.PowerUpType.CAGE_SHAKER:
-			return "💥 " + TranslationServer.translate("PUP_CAGE_SHAKER_NAME")
+			return "[SHAKER] " + TranslationServer.translate("PUP_CAGE_SHAKER_NAME")
 	return "POWER-UP"
 
 static func get_type_name(t: CageConfig.PowerUpType) -> String:

@@ -171,18 +171,18 @@ func _build_ui() -> void:
 	joystick_base.add_child(joystick_knob)
 
 	# --- 2. Action Buttons (Rechts) ---
-	jump_btn = _create_action_button("⚽\nJUMP", Color(1.0, 0.88, 0.25, 0.85), Color(0.2, 0.15, 0.02, 0.7), 46.0)
+	jump_btn = _create_action_button("JUMP", Color(1.0, 0.88, 0.25, 0.85), Color(0.2, 0.15, 0.02, 0.7), 46.0)
 	jump_btn.name = "TouchJumpBtn"
 	root_control.add_child(jump_btn)
 
-	boost_btn = _create_action_button("⚡\nBOOST", Color(1.0, 0.2, 0.6, 0.85), Color(0.2, 0.02, 0.12, 0.7), 40.0)
+	boost_btn = _create_action_button("BOOST", Color(1.0, 0.2, 0.6, 0.85), Color(0.2, 0.02, 0.12, 0.7), 40.0)
 	boost_btn.name = "TouchBoostBtn"
 	root_control.add_child(boost_btn)
 
 	# --- 3. Top Quick-Access Buttons ---
 	pause_btn = Button.new()
 	pause_btn.name = "TouchPauseBtn"
-	pause_btn.text = "⏸️"
+	pause_btn.text = "||"
 	pause_btn.focus_mode = Control.FOCUS_NONE
 	pause_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	var p_style = StyleBoxFlat.new()
@@ -201,7 +201,7 @@ func _build_ui() -> void:
 
 	cam_btn = Button.new()
 	cam_btn.name = "TouchCamBtn"
-	cam_btn.text = "🎥"
+	cam_btn.text = "CAM"
 	cam_btn.focus_mode = Control.FOCUS_NONE
 	cam_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	cam_btn.add_theme_stylebox_override("normal", p_style)
@@ -282,6 +282,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		_handle_touch_drag(drag.index, drag.position)
+	elif event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				_handle_touch_down(999, mb.position)
+			else:
+				_handle_touch_up(999)
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+			_handle_touch_drag(999, mm.position)
 
 func _handle_touch_down(index: int, pos: Vector2) -> void:
 	var vp_size = _get_viewport_size()
