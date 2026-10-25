@@ -26,15 +26,19 @@ Zwei rollende, elastische Kugel-Spieler mit Comic-Augen treten in einem geschlos
 
 ## 🕹️ Hotkeys & System-Steuerung
 
-| Hotkey | Funktion |
+| Hotkey / Gamepad | Funktion |
 | :--- | :--- |
+| `[D-Pad]` / Pfeiltasten | Menü- & Lobby-Navigation (Gamepad Focus-Routing) |
+| `[A]` / `[Space]` / `[Enter]` | Fokussierte Lobby-Option / Button betätigen |
+| `[START]` | Match-Anstoß aus Lobby / Spiel pausieren |
+| `[F]` / Gamepad `[Y]` / `[LB]` | Kamera-Fokus umschalten (`Dynamic`, `Ball-Cam`, `Broadcast`) – auch in Lobby |
+| `[T]` / Gamepad `[RB]` | Arena-Theme umschalten (`Industrial`, `Sunny`, `Cyber`) |
+| `[P]` / Gamepad `[X]` | Power-Ups aktivieren / deaktivieren |
 | `[R]` | Match-Neustart / Rematch |
-| `[ESC]` | Zurück zur Pre-Match-Lobby |
-| `[B]` | Spieler 2 zwischen KI-Bot und lokalem Spieler umschalten |
-| `[P]` | Power-Ups aktivieren / deaktivieren |
+| `[ESC]` / Gamepad `[B]` | Zurück zur Pre-Match-Lobby / Pausemenü schließen |
 | `[M]` | Musik stummschalten / reaktivieren |
 | `[L]` | Sprache umschalten (Deutsch 🇩🇪 / Englisch 🇬🇧) |
-| `[F11]` | Vollbild / Fenstermodus umschalten (Startet standardmäßig im Vollbild) |
+| `[F11]` | Vollbild / Fenstermodus umschalten |
 
 ---
 
@@ -63,7 +67,7 @@ Aus der Sammlung *"5 Chiptunes (Action)"* von **Juhani Junkala (SubspaceAudio)**
 
 ---
 
-## 🚀 Export & GitHub Release (v0.1.0)
+## 🚀 Export & GitHub Release (v0.2.1)
 
 Automatisierte Multiplattform-Builds werden per GitHub Actions (`.github/workflows/export.yml`) bei jedem Git-Tag `v*` erstellt:
 - **Windows Desktop:** `CrazyCageFootball-Windows.zip` (`.exe`)

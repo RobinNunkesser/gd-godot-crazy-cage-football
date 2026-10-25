@@ -270,10 +270,35 @@ func _test_main_scene() -> bool:
 	
 	# Lobby & 4-Player Team Setup
 	assert(main_scene.state_manager.current_state == CageStateManager.MatchState.LOBBY, "Initial state should be LOBBY")
-	main_scene.cycle_player_slot(2) # Player 3
-	assert(main_scene.player3.control_type == CagePlayer.ControlType.HUMAN_KB1, "P3 should cycle to HUMAN_KB1")
-	main_scene.toggle_player_team(2)
-	assert(main_scene.player3.team_id == 2, "P3 should toggle to Team 2")
+	assert(main_scene.ui_lobby_start_btn != null, "Lobby start button must exist")
+	assert(main_scene.ui_lobby_focus_btn != null, "Lobby focus button must exist")
+	assert(main_scene.ui_lobby_theme_btn != null, "Lobby theme button must exist")
+	assert(main_scene.ui_lobby_powerup_btn != null, "Lobby powerup button must exist")
+	assert(main_scene.ui_lobby_slot_team_btns.size() == 4, "Must have 4 slot team buttons")
+	assert(main_scene.ui_lobby_slot_ctrl_btns.size() == 4, "Must have 4 slot control buttons")
+	
+	# Focus Neighbor Routing im Hauptmenü prüfen
+	assert(not str(main_scene.ui_lobby_start_btn.focus_neighbor_top).is_empty(), "Start button must have top focus neighbor")
+	assert(not str(main_scene.ui_lobby_focus_btn.focus_neighbor_bottom).is_empty(), "Focus button must have bottom focus neighbor")
+	assert(not str(main_scene.ui_lobby_slot_team_btns[0].focus_neighbor_bottom).is_empty(), "Slot team button must route downwards")
+
+	# Lobby Buttons Interaktivität prüfen (Gamepad A / Click)
+	main_scene.ui_lobby_slot_ctrl_btns[2].pressed.emit() # P3 Slot Control
+	assert(main_scene.player3.control_type == CagePlayer.ControlType.HUMAN_KB1, "P3 should cycle to HUMAN_KB1 via button click")
+	main_scene.ui_lobby_slot_team_btns[2].pressed.emit() # P3 Team
+	assert(main_scene.player3.team_id == 2, "P3 should toggle to Team 2 via button click")
+
+	# Live Kamera-Fokus im Hauptmenü testen
+	assert(main_scene.camera.focus_mode == CageCamera.FocusMode.DYNAMIC_ARENA, "Initial camera mode should be DYNAMIC_ARENA")
+	main_scene.ui_lobby_focus_btn.pressed.emit()
+	assert(main_scene.camera.focus_mode == CageCamera.FocusMode.BALL_CAM, "Clicking focus button should switch camera to BALL_CAM")
+	assert("BALL" in main_scene.ui_lobby_focus_btn.text, "Focus button label must reflect BALL_CAM")
+	main_scene.cycle_gameplay_focus()
+	assert(main_scene.camera.focus_mode == CageCamera.FocusMode.BROADCAST, "Cycling focus should switch camera to BROADCAST")
+	assert("BROADCAST" in main_scene.ui_lobby_focus_btn.text, "Focus button label must reflect BROADCAST")
+	main_scene.cycle_gameplay_focus()
+	assert(main_scene.camera.focus_mode == CageCamera.FocusMode.DYNAMIC_ARENA, "Cycling focus again should wrap to DYNAMIC_ARENA")
+
 	main_scene.start_match_from_lobby()
 	assert(main_scene.state_manager.current_state == CageStateManager.MatchState.WARMUP, "State should be WARMUP after match start")
 	

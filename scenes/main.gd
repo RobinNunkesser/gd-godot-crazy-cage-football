@@ -66,6 +66,13 @@ var ui_subtitle_label: Label
 var ui_hint_label: Label
 var ui_card_slot_titles: Array[Label] = []
 var ui_key_hint_labels: Array[Label] = []
+var ui_lobby_slot_ctrl_btns: Array[Button] = []
+var ui_lobby_slot_team_btns: Array[Button] = []
+var ui_lobby_theme_btn: Button
+var ui_lobby_powerup_btn: Button
+var ui_lobby_focus_btn: Button
+var ui_lobby_start_btn: Button
+var ui_lobby_gp_hint_lbl: Label
 
 # Pause & Options Menu
 var ui_pause_container: Control
@@ -125,6 +132,8 @@ func _ready() -> void:
 	state_manager.enter_lobby()
 	if sound_manager:
 		sound_manager.play_menu_bgm()
+	if is_instance_valid(ui_lobby_start_btn) and ui_lobby_start_btn.is_inside_tree():
+		ui_lobby_start_btn.grab_focus()
 
 func _init_translations() -> void:
 	for lang in ["de", "en"]:
@@ -750,12 +759,29 @@ func _build_ui() -> void:
 	ui_team_labels.clear()
 	ui_card_slot_titles.clear()
 	ui_key_hint_labels.clear()
-	var col_width = 260
-	var start_x = 80
+	ui_lobby_slot_ctrl_btns.clear()
+	ui_lobby_slot_team_btns.clear()
+	
+	var col_width = 265
+	var start_x = 72
+	var spacing = 25
 	for i in range(4):
 		var card = Panel.new()
-		card.position = Vector2(start_x + i * (col_width + 20), 150)
-		card.size = Vector2(col_width, 380)
+		card.name = "SlotCard%d" % i
+		card.position = Vector2(start_x + i * (col_width + spacing), 104)
+		card.size = Vector2(col_width, 360)
+		var c_sb = StyleBoxFlat.new()
+		c_sb.bg_color = Color(0.08, 0.12, 0.20, 0.94)
+		c_sb.border_width_left = 2
+		c_sb.border_width_top = 2
+		c_sb.border_width_right = 2
+		c_sb.border_width_bottom = 2
+		c_sb.border_color = Color(0.2, 0.45, 0.7, 0.7)
+		c_sb.corner_radius_top_left = 10
+		c_sb.corner_radius_top_right = 10
+		c_sb.corner_radius_bottom_left = 10
+		c_sb.corner_radius_bottom_right = 10
+		card.add_theme_stylebox_override("panel", c_sb)
 		ui_lobby_panel.add_child(card)
 		
 		var p_title = Label.new()
@@ -764,29 +790,46 @@ func _build_ui() -> void:
 			slot_fmt = "SLOT %d"
 		p_title.text = slot_fmt % (i + 1)
 		p_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		p_title.position = Vector2(10, 15)
-		p_title.size = Vector2(col_width - 20, 30)
-		p_title.add_theme_font_size_override("font_size", 22)
+		p_title.position = Vector2(10, 12)
+		p_title.size = Vector2(col_width - 20, 26)
+		p_title.add_theme_font_size_override("font_size", 20)
 		card.add_child(p_title)
 		ui_card_slot_titles.append(p_title)
 		
+		var team_btn = _create_styled_button("TEAM ROT", 16, Color(0.25, 0.14, 0.14, 0.95))
+		team_btn.name = "SlotTeamBtn%d" % i
+		team_btn.position = Vector2(12, 44)
+		team_btn.size = Vector2(col_width - 24, 38)
+		team_btn.pressed.connect(func():
+			toggle_player_team(i)
+		)
+		card.add_child(team_btn)
+		ui_lobby_slot_team_btns.append(team_btn)
+		
 		var team_lbl = Label.new()
-		team_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		team_lbl.position = Vector2(10, 55)
-		team_lbl.size = Vector2(col_width - 20, 30)
-		team_lbl.add_theme_font_size_override("font_size", 20)
+		team_lbl.visible = false
 		card.add_child(team_lbl)
 		ui_team_labels.append(team_lbl)
 		
 		var slot_lbl = Label.new()
 		slot_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		slot_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		slot_lbl.position = Vector2(10, 95)
-		slot_lbl.size = Vector2(col_width - 20, 140)
-		slot_lbl.add_theme_font_size_override("font_size", 20)
+		slot_lbl.position = Vector2(12, 88)
+		slot_lbl.size = Vector2(col_width - 24, 150)
+		slot_lbl.add_theme_font_size_override("font_size", 18)
 		slot_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 		card.add_child(slot_lbl)
 		ui_slot_labels.append(slot_lbl)
+		
+		var ctrl_btn = _create_styled_button("MODUS", 15, Color(0.14, 0.22, 0.34, 0.95))
+		ctrl_btn.name = "SlotCtrlBtn%d" % i
+		ctrl_btn.position = Vector2(12, 244)
+		ctrl_btn.size = Vector2(col_width - 24, 38)
+		ctrl_btn.pressed.connect(func():
+			cycle_player_slot(i)
+		)
+		card.add_child(ctrl_btn)
+		ui_lobby_slot_ctrl_btns.append(ctrl_btn)
 		
 		var key_hint = Label.new()
 		var team_keys = ["Q", "W", "E", "R"]
@@ -795,38 +838,65 @@ func _build_ui() -> void:
 			hint_fmt = "Taste [%d]: Modus\nTaste [%s]: Team wechseln"
 		key_hint.text = hint_fmt % [i + 1, team_keys[i]]
 		key_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		key_hint.position = Vector2(10, 270)
-		key_hint.size = Vector2(col_width - 20, 60)
-		key_hint.add_theme_font_size_override("font_size", 16)
-		key_hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
+		key_hint.position = Vector2(10, 288)
+		key_hint.size = Vector2(col_width - 20, 64)
+		key_hint.add_theme_font_size_override("font_size", 13)
+		key_hint.add_theme_color_override("font_color", Color(0.70, 0.75, 0.85))
 		card.add_child(key_hint)
 		ui_key_hint_labels.append(key_hint)
 	
 	ui_theme_toggle_label = Label.new()
-	ui_theme_toggle_label.position = Vector2(100, 520)
-	ui_theme_toggle_label.size = Vector2(1080, 36)
-	ui_theme_toggle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ui_theme_toggle_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	ui_theme_toggle_label.add_theme_font_size_override("font_size", 21)
-	ui_theme_toggle_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	ui_theme_toggle_label.gui_input.connect(func(ev: InputEvent):
-		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-			cycle_arena_theme()
-	)
+	ui_theme_toggle_label.visible = false
 	ui_lobby_panel.add_child(ui_theme_toggle_label)
-
+	
 	ui_powerup_toggle_label = Label.new()
-	ui_powerup_toggle_label.position = Vector2(100, 560)
-	ui_powerup_toggle_label.size = Vector2(1080, 36)
-	ui_powerup_toggle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ui_powerup_toggle_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	ui_powerup_toggle_label.add_theme_font_size_override("font_size", 20)
-	ui_powerup_toggle_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	ui_powerup_toggle_label.gui_input.connect(func(ev: InputEvent):
-		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-			toggle_powerups()
-	)
+	ui_powerup_toggle_label.visible = false
 	ui_lobby_panel.add_child(ui_powerup_toggle_label)
+	
+	ui_lobby_theme_btn = _create_styled_button("🏟️ [T] ARENA", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_theme_btn.name = "LobbyThemeBtn"
+	ui_lobby_theme_btn.position = Vector2(72, 478)
+	ui_lobby_theme_btn.size = Vector2(360, 44)
+	ui_lobby_theme_btn.pressed.connect(func():
+		cycle_arena_theme()
+	)
+	ui_lobby_panel.add_child(ui_lobby_theme_btn)
+	
+	ui_lobby_powerup_btn = _create_styled_button("⚡ [P] POWER-UPS", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_powerup_btn.name = "LobbyPowerupBtn"
+	ui_lobby_powerup_btn.position = Vector2(460, 478)
+	ui_lobby_powerup_btn.size = Vector2(360, 44)
+	ui_lobby_powerup_btn.pressed.connect(func():
+		toggle_powerups()
+	)
+	ui_lobby_panel.add_child(ui_lobby_powerup_btn)
+	
+	ui_lobby_focus_btn = _create_styled_button("📷 [F] KAMERA-FOKUS", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_focus_btn.name = "LobbyFocusBtn"
+	ui_lobby_focus_btn.position = Vector2(848, 478)
+	ui_lobby_focus_btn.size = Vector2(360, 44)
+	ui_lobby_focus_btn.pressed.connect(func():
+		cycle_gameplay_focus()
+	)
+	ui_lobby_panel.add_child(ui_lobby_focus_btn)
+	
+	ui_lobby_start_btn = _create_styled_button(tr("LOBBY_START_BTN"), 20, Color(0.12, 0.40, 0.22, 0.95))
+	ui_lobby_start_btn.name = "LobbyStartBtn"
+	ui_lobby_start_btn.position = Vector2(240, 538)
+	ui_lobby_start_btn.size = Vector2(800, 54)
+	ui_lobby_start_btn.pressed.connect(func():
+		start_match_from_lobby()
+	)
+	ui_lobby_panel.add_child(ui_lobby_start_btn)
+	
+	ui_lobby_gp_hint_lbl = Label.new()
+	ui_lobby_gp_hint_lbl.text = tr("LOBBY_HINT_GAMEPAD")
+	ui_lobby_gp_hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_lobby_gp_hint_lbl.position = Vector2(100, 604)
+	ui_lobby_gp_hint_lbl.size = Vector2(1080, 28)
+	ui_lobby_gp_hint_lbl.add_theme_font_size_override("font_size", 14)
+	ui_lobby_gp_hint_lbl.add_theme_color_override("font_color", Color(0.75, 0.85, 0.95, 0.85))
+	ui_lobby_panel.add_child(ui_lobby_gp_hint_lbl)
 	
 	_update_lobby_ui()
 	canvas.add_child(ui_lobby_panel)
@@ -1333,6 +1403,63 @@ func _setup_focus_routing() -> void:
 		ui_stats_lobby_btn.focus_neighbor_left = NodePath("../RematchBtn")
 		ui_stats_lobby_btn.focus_neighbor_right = NodePath("../RematchBtn")
 
+	# Lobby / Main Menu Focus Routing
+	if is_instance_valid(ui_lobby_start_btn):
+		ui_lobby_start_btn.name = "LobbyStartBtn"
+	if is_instance_valid(ui_lobby_theme_btn):
+		ui_lobby_theme_btn.name = "LobbyThemeBtn"
+	if is_instance_valid(ui_lobby_powerup_btn):
+		ui_lobby_powerup_btn.name = "LobbyPowerupBtn"
+	if is_instance_valid(ui_lobby_focus_btn):
+		ui_lobby_focus_btn.name = "LobbyFocusBtn"
+		
+	for i in range(ui_lobby_slot_team_btns.size()):
+		ui_lobby_slot_team_btns[i].name = "SlotTeamBtn%d" % i
+	for i in range(ui_lobby_slot_ctrl_btns.size()):
+		ui_lobby_slot_ctrl_btns[i].name = "SlotCtrlBtn%d" % i
+		
+	if is_instance_valid(ui_lobby_start_btn) and is_instance_valid(ui_lobby_powerup_btn) and ui_lobby_slot_team_btns.size() >= 4 and ui_lobby_slot_ctrl_btns.size() >= 4:
+		ui_lobby_start_btn.focus_neighbor_top = NodePath("../LobbyPowerupBtn")
+		ui_lobby_start_btn.focus_neighbor_bottom = NodePath("../SlotCard0/SlotTeamBtn0")
+		ui_lobby_start_btn.focus_neighbor_left = NodePath("../LobbyThemeBtn")
+		ui_lobby_start_btn.focus_neighbor_right = NodePath("../LobbyFocusBtn")
+		
+		ui_lobby_theme_btn.focus_neighbor_top = NodePath("../SlotCard0/SlotCtrlBtn0")
+		ui_lobby_theme_btn.focus_neighbor_bottom = NodePath("../LobbyStartBtn")
+		ui_lobby_theme_btn.focus_neighbor_right = NodePath("../LobbyPowerupBtn")
+		ui_lobby_theme_btn.focus_neighbor_left = NodePath("../LobbyFocusBtn")
+		
+		ui_lobby_powerup_btn.focus_neighbor_top = NodePath("../SlotCard1/SlotCtrlBtn1")
+		ui_lobby_powerup_btn.focus_neighbor_bottom = NodePath("../LobbyStartBtn")
+		ui_lobby_powerup_btn.focus_neighbor_left = NodePath("../LobbyThemeBtn")
+		ui_lobby_powerup_btn.focus_neighbor_right = NodePath("../LobbyFocusBtn")
+		
+		ui_lobby_focus_btn.focus_neighbor_top = NodePath("../SlotCard3/SlotCtrlBtn3")
+		ui_lobby_focus_btn.focus_neighbor_bottom = NodePath("../LobbyStartBtn")
+		ui_lobby_focus_btn.focus_neighbor_left = NodePath("../LobbyPowerupBtn")
+		ui_lobby_focus_btn.focus_neighbor_right = NodePath("../LobbyThemeBtn")
+		
+		for i in range(4):
+			var prev_i = (i + 3) % 4
+			var next_i = (i + 1) % 4
+			var t_btn = ui_lobby_slot_team_btns[i]
+			var c_btn = ui_lobby_slot_ctrl_btns[i]
+			
+			t_btn.focus_neighbor_top = NodePath("../../LobbyStartBtn")
+			t_btn.focus_neighbor_bottom = NodePath("../SlotCtrlBtn%d" % i)
+			t_btn.focus_neighbor_left = NodePath("../../SlotCard%d/SlotTeamBtn%d" % [prev_i, prev_i])
+			t_btn.focus_neighbor_right = NodePath("../../SlotCard%d/SlotTeamBtn%d" % [next_i, next_i])
+			
+			c_btn.focus_neighbor_top = NodePath("../SlotTeamBtn%d" % i)
+			c_btn.focus_neighbor_left = NodePath("../../SlotCard%d/SlotCtrlBtn%d" % [prev_i, prev_i])
+			c_btn.focus_neighbor_right = NodePath("../../SlotCard%d/SlotCtrlBtn%d" % [next_i, next_i])
+			if i == 0:
+				c_btn.focus_neighbor_bottom = NodePath("../../LobbyThemeBtn")
+			elif i == 3:
+				c_btn.focus_neighbor_bottom = NodePath("../../LobbyFocusBtn")
+			else:
+				c_btn.focus_neighbor_bottom = NodePath("../../LobbyPowerupBtn")
+
 func _update_volume_labels() -> void:
 	if ui_master_lbl and ui_master_slider:
 		ui_master_lbl.text = tr("VOL_MASTER") + ": %d%%" % int(ui_master_slider.value * 100)
@@ -1403,6 +1530,7 @@ func cycle_gameplay_focus() -> void:
 	if sound_manager:
 		sound_manager.play_ui_click()
 	_update_pause_buttons_text()
+	_update_lobby_ui()
 	if ui_banner_label:
 		ui_banner_label.visible = true
 		ui_banner_label.text = mode_name
@@ -1544,7 +1672,51 @@ func _update_lobby_ui() -> void:
 			else:
 				ui_team_labels[i].text = tr("TEAM_BLUE_LBL")
 				ui_team_labels[i].add_theme_color_override("font_color", Color(0.3, 0.6, 1.0))
+		if i < ui_lobby_slot_team_btns.size():
+			var btn = ui_lobby_slot_team_btns[i]
+			var team_name = tr("TEAM_RED_LBL") if p.team_id == 1 else tr("TEAM_BLUE_LBL")
+			btn.text = ("🔴 " if p.team_id == 1 else "🔵 ") + team_name
+		if i < ui_lobby_slot_ctrl_btns.size():
+			var c_btn = ui_lobby_slot_ctrl_btns[i]
+			var mode_title = tr("BTN_CHANGE_MODE")
+			if "%s" in mode_title:
+				c_btn.text = "🎮 " + (mode_title % ("[%d]" % (i + 1)))
+			else:
+				c_btn.text = "🎮 " + mode_title
 	
+	if ui_lobby_theme_btn and theme_manager:
+		var cur_theme = theme_manager.get_current_theme()
+		var dname = theme_manager.get_theme_display_name(cur_theme)
+		var btn_fmt = tr("LOBBY_THEME_BTN")
+		if not ("%s" in btn_fmt):
+			btn_fmt = "🏟️ [T] ARENA: %s"
+		ui_lobby_theme_btn.text = btn_fmt % dname
+	
+	if ui_lobby_powerup_btn:
+		var p_status = tr("POWERUPS_NOW_ON") if CageConfig.powerups_enabled else tr("POWERUPS_NOW_OFF")
+		ui_lobby_powerup_btn.text = "⚡ [P] " + p_status
+		
+	if ui_lobby_focus_btn and is_instance_valid(camera):
+		var fname = ""
+		match camera.focus_mode:
+			CageCamera.FocusMode.DYNAMIC_ARENA:
+				fname = tr("FOCUS_MODE_DYNAMIC")
+			CageCamera.FocusMode.BALL_CAM:
+				fname = tr("FOCUS_MODE_BALL")
+			CageCamera.FocusMode.BROADCAST:
+				fname = tr("FOCUS_MODE_BROADCAST")
+		var fmt = tr("FOCUS_BTN")
+		if "%s" in fmt:
+			ui_lobby_focus_btn.text = fmt % fname
+		else:
+			ui_lobby_focus_btn.text = "📷 [F] " + fname
+			
+	if ui_lobby_start_btn:
+		ui_lobby_start_btn.text = tr("LOBBY_START_BTN")
+		
+	if ui_lobby_gp_hint_lbl:
+		ui_lobby_gp_hint_lbl.text = tr("LOBBY_HINT_GAMEPAD")
+
 	if ui_theme_toggle_label and theme_manager:
 		var cur_theme = theme_manager.get_current_theme()
 		var dname = theme_manager.get_theme_display_name(cur_theme)
@@ -1552,15 +1724,12 @@ func _update_lobby_ui() -> void:
 		if not ("%s" in btn_fmt):
 			btn_fmt = "🏟️ [T] ARENA: %s"
 		ui_theme_toggle_label.text = btn_fmt % dname
-		ui_theme_toggle_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.35))
 	
 	if ui_powerup_toggle_label:
 		if CageConfig.powerups_enabled:
 			ui_powerup_toggle_label.text = tr("POWERUPS_ENABLED_LOBBY")
-			ui_powerup_toggle_label.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
 		else:
 			ui_powerup_toggle_label.text = tr("POWERUPS_DISABLED_LOBBY")
-			ui_powerup_toggle_label.add_theme_color_override("font_color", Color(0.9, 0.45, 0.45))
 
 func _get_control_type_name(ct: CagePlayer.ControlType) -> String:
 	match ct:
@@ -2075,6 +2244,8 @@ func return_to_lobby() -> void:
 		sound_manager.play_menu_bgm()
 	ui_lobby_panel.visible = true
 	_update_lobby_ui()
+	if is_instance_valid(ui_lobby_start_btn) and ui_lobby_start_btn.is_inside_tree():
+		ui_lobby_start_btn.grab_focus()
 
 func _process(delta: float) -> void:
 	if is_game_paused:
