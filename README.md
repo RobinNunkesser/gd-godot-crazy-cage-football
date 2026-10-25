@@ -15,12 +15,13 @@ Zwei rollende, elastische Kugel-Spieler mit Comic-Augen treten in einem geschlos
 
 ## 🕹️ Steuerung (Local 2-Player Couch Mode)
 
-| Aktion | Spieler 1 (Rot) | Spieler 2 (Blau) | Gamepad |
-| :--- | :--- | :--- | :--- |
-| **Bewegung ($X/Z$)** | `W`, `A`, `S`, `D` | Pfeiltasten (`↑`, `←`, `↓`, `→`) | Linker Analogstick |
-| **Sprung (`Zıplama`)** | `Space` oder `Q` | `Enter` oder `Rechte Shift` | Button A |
-| **Sprint / Rammen** | `Linke Shift` | `Rechtes Strg` | Button X |
-| **Neustart** | `R` | `R` | Start-Button |
+| Aktion | Spieler 1 (Rot) | Spieler 2 (Blau) | Gamepad | Touch / Tablet |
+| :--- | :--- | :--- | :--- | :--- |
+| **Bewegung ($X/Z$)** | `W`, `A`, `S`, `D` | Pfeiltasten (`↑`, `←`, `↓`, `→`) | Linker Analogstick | Virtueller Touch-Joystick (links) |
+| **Sprung (`Zıplama`)** | `Space` oder `Q` | `Enter` oder `Rechte Shift` | Button A | Touch-Button `[⚽ JUMP]` (rechts) |
+| **Sprint / Rammen** | `Linke Shift` | `Rechtes Strg` | Button X | Touch-Button `[⚡ BOOST]` (rechts) |
+| **Neustart** | `R` | `R` | Start-Button | Menü-Button / Stats-Screen |
+| **Pause / Kamera** | `ESC` / `F` | `ESC` | Start / Y | Quick-Buttons `[⏸️]` & `[🎥]` (oben) |
 
 ---
 
@@ -67,7 +68,7 @@ Aus der Sammlung *"5 Chiptunes (Action)"* von **Juhani Junkala (SubspaceAudio)**
 
 ---
 
-## 🚀 Export & GitHub Release (v0.2.1)
+## 🚀 Export & GitHub Release (v0.2.2)
 
 Automatisierte Multiplattform-Builds werden per GitHub Actions (`.github/workflows/export.yml`) bei jedem Git-Tag `v*` erstellt:
 - **Windows Desktop:** `CrazyCageFootball-Windows.zip` (`.exe`)

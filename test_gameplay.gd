@@ -10,6 +10,7 @@ const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CageThemeManager = preload("res://scripts/cage_theme_manager.gd")
 const CageMatchStats = preload("res://scripts/match_stats.gd")
+const CageTouchOverlay = preload("res://scripts/cage_touch_overlay.gd")
 
 func _init() -> void:
 	print("\n--- Running Headless Godot 4 Unit & Gameplay Tests for Crazy Cage Football ---")
@@ -27,6 +28,7 @@ func _init() -> void:
 	success = success and _test_theme_manager()
 	success = success and _test_match_stats()
 	success = success and _test_pause_and_options()
+	success = success and _test_touch_overlay()
 	
 	if success:
 		print("=== ALL TESTS FOR CRAZY CAGE FOOTBALL PASSED SUCCESSFULLY! ===\n")
@@ -591,5 +593,66 @@ func _test_pause_and_options() -> bool:
 	
 	main_scene.queue_free()
 	print("  -> Pause/Options, Match Stats Modal & Volume Controls OK.")
+	return true
+
+func _test_touch_overlay() -> bool:
+	print("[13/13] Testing CageTouchOverlay tablet detection, multi-touch virtual joystick & buttons...")
+	var overlay = CageTouchOverlay.new()
+	overlay.force_visible = true
+	root.add_child(overlay)
+	overlay._ready()
+	
+	assert(overlay.is_touch_active == true, "force_visible should activate touch mode")
+	assert(overlay.jump_btn != null, "Jump touch button must exist")
+	assert(overlay.boost_btn != null, "Boost touch button must exist")
+	assert(overlay.joystick_base != null, "Joystick base must exist")
+	assert(overlay.joystick_knob != null, "Joystick knob must exist")
+	
+	# Test Gameplay State Visibility
+	overlay.set_gameplay_active(false)
+	assert(overlay.joystick_base.visible == false, "Joystick should be hidden when gameplay inactive")
+	assert(overlay.jump_btn.visible == false, "Jump button should be hidden when gameplay inactive")
+	
+	overlay.set_gameplay_active(true)
+	assert(overlay.joystick_base.visible == true, "Joystick should be visible when gameplay active")
+	assert(overlay.jump_btn.visible == true, "Jump button should be visible when gameplay active")
+	
+	# Test Jump Touch Simulation
+	var jump_pos = overlay.jump_btn.position + Vector2(10.0, 10.0)
+	overlay._handle_touch_down(0, jump_pos)
+	assert(Input.is_action_pressed("p1_jump"), "Touch down on jump button should press p1_jump action")
+	overlay._handle_touch_up(0)
+	assert(not Input.is_action_pressed("p1_jump"), "Touch up on jump button should release p1_jump action")
+	
+	# Test Boost Touch Simulation
+	var boost_pos = overlay.boost_btn.position + Vector2(10.0, 10.0)
+	overlay._handle_touch_down(1, boost_pos)
+	assert(Input.is_action_pressed("p1_boost"), "Touch down on boost button should press p1_boost action")
+	overlay._handle_touch_up(1)
+	assert(not Input.is_action_pressed("p1_boost"), "Touch up on boost button should release p1_boost action")
+	
+	# Test Virtual Joystick Drag Simulation
+	var j_start = Vector2(100.0, 400.0)
+	overlay._handle_touch_down(2, j_start)
+	overlay._handle_touch_drag(2, j_start + Vector2(40.0, 0.0)) # Drag right
+	assert(overlay.get_input_vector().x > 0.0, "Joystick vector X should be positive when dragged right")
+	assert(Input.is_action_pressed("p1_right"), "Dragging right should press p1_right action")
+	overlay._handle_touch_up(2)
+	assert(overlay.get_input_vector() == Vector2.ZERO, "Releasing joystick should reset vector to ZERO")
+	assert(not Input.is_action_pressed("p1_right"), "Releasing joystick should release p1_right action")
+	
+	# Test Quick Actions
+	var pause_fired = [false]
+	overlay.pause_requested.connect(func(): pause_fired[0] = true)
+	overlay.pause_btn.pressed.emit()
+	assert(pause_fired[0], "Clicking pause button should emit pause_requested")
+	
+	var cam_fired = [false]
+	overlay.camera_focus_requested.connect(func(): cam_fired[0] = true)
+	overlay.cam_btn.pressed.emit()
+	assert(cam_fired[0], "Clicking cam button should emit camera_focus_requested")
+	
+	overlay.queue_free()
+	print("  -> CageTouchOverlay tablet virtual joystick & arcade buttons OK.")
 	return true
 

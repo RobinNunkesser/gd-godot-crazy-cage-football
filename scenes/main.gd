@@ -11,9 +11,11 @@ const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CagePowerUp = preload("res://scripts/power_up.gd")
 const CageThemeManager = preload("res://scripts/cage_theme_manager.gd")
 const CageMatchStats = preload("res://scripts/match_stats.gd")
+const CageTouchOverlay = preload("res://scripts/cage_touch_overlay.gd")
 
 var theme_manager: CageThemeManager
 var match_stats: CageMatchStats
+var touch_overlay: CageTouchOverlay
 var is_game_paused: bool = false
 var world_env: WorldEnvironment
 var stadium_light: DirectionalLight3D
@@ -301,6 +303,13 @@ func _build_scene() -> void:
 	# 9. Theme Manager & Initiale Theme-Anwendung
 	theme_manager = CageThemeManager.get_instance()
 	apply_theme(theme_manager.get_current_theme(), false)
+	
+	# 10. Touch Overlay für Tablets & Web
+	touch_overlay = CageTouchOverlay.new()
+	touch_overlay.name = "CageTouchOverlay"
+	touch_overlay.pause_requested.connect(toggle_pause)
+	touch_overlay.camera_focus_requested.connect(cycle_gameplay_focus)
+	add_child(touch_overlay)
 
 func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: Color = Color(0.75, 0.8, 0.85, 0.75)) -> void:
 	var body = StaticBody3D.new()
@@ -1558,10 +1567,14 @@ func toggle_pause() -> void:
 		ball.freeze = is_game_paused
 	if sound_manager:
 		sound_manager.play_ui_click()
+	if touch_overlay:
+		touch_overlay.set_gameplay_active(!is_game_paused)
 
 func show_match_stats() -> void:
 	if not ui_stats_container:
 		return
+	if touch_overlay:
+		touch_overlay.set_gameplay_active(false)
 	
 	if ui_banner_label:
 		ui_banner_label.visible = false
@@ -2217,6 +2230,8 @@ func start_match_from_lobby() -> void:
 	
 	ui_lobby_panel.visible = false
 	ui_hud_container.visible = true
+	if touch_overlay:
+		touch_overlay.set_gameplay_active(true)
 	_power_up_spawn_timer = 0.0
 	clear_power_ups()
 	reset_positions()
@@ -2230,6 +2245,8 @@ func start_match_from_lobby() -> void:
 
 func return_to_lobby() -> void:
 	is_game_paused = false
+	if touch_overlay:
+		touch_overlay.set_gameplay_active(false)
 	if ui_pause_container:
 		ui_pause_container.visible = false
 	if ui_stats_container:
@@ -2290,6 +2307,8 @@ func _process(delta: float) -> void:
 
 func restart_game() -> void:
 	is_game_paused = false
+	if touch_overlay:
+		touch_overlay.set_gameplay_active(true)
 	if ui_pause_container:
 		ui_pause_container.visible = false
 	if ui_stats_container:
