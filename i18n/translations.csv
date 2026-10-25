@@ -15,7 +15,7 @@ CTRL_AI_BOT,"KI-BOT\n(Autonomes Dribbeln & Zıplama)","AI BOT\n(Autonomous Dribb
 KEY_HINT,"Taste [%d]: Modus\nTaste [%s]: Team wechseln","Key [%d]: Mode\nKey [%s]: Change Team"
 POWERUPS_ENABLED_LOBBY,"⚡ [P] POWER-UPS: AKTIVIERT  •  Super-Shot | Speed-Boots | Magnetfuß | Freeze-Tackle | Cage-Shaker ⚡","⚡ [P] POWER-UPS: ENABLED  •  Super-Shot | Speed-Boots | Magnet Foot | Freeze-Tackle | Cage-Shaker ⚡"
 POWERUPS_DISABLED_LOBBY,"🚫 [P] POWER-UPS: DEAKTIVIERT (Klassischer Pure-Cage-Modus ohne Pickups) 🚫","🚫 [P] POWER-UPS: DISABLED (Classic pure cage mode without pickups) 🚫"
-UI_HINTS_BAR,"[R]: Neustart  |  [ESC]: Lobby  |  [B]: Bot  |  [P]: Pickups  |  [M]: Musik  |  [L]: Sprache  |  [F11]: Vollbild","[R]: Restart  |  [ESC]: Lobby  |  [B]: Bot  |  [P]: Pickups  |  [M]: Music  |  [L]: Language  |  [F11]: Fullscreen"
+UI_HINTS_BAR,"[R]: Neustart  |  [ESC]: Lobby  |  [B]: Bot  |  [P]: Pickups  |  [T]: Arena  |  [M]: Musik  |  [L]: Sprache  |  [F11]: Vollbild","[R]: Restart  |  [ESC]: Lobby  |  [B]: Bot  |  [P]: Pickups  |  [T]: Arena  |  [M]: Music  |  [L]: Language  |  [F11]: Fullscreen"
 MIN_PLAYERS_WARN,Mindestens 1 Spieler pro Team erforderlich!,At least 1 player per team required!
 BANNER_KICKOFF,⚽ KICK OFF! ⚽,⚽ KICK OFF! ⚽
 GOAL_RED,⚽ TOOOOR TEAM ROT! ⚽,⚽ GOOOOAL TEAM RED! ⚽
@@ -43,3 +43,8 @@ PUP_FREEZE_TACKLE_DESC,Eis-Attacke! Nächster Bodycheck friert Gegner für 2 Sek
 PUP_CAGE_SHAKER_NAME,CAGE-SHAKER,CAGE-SHAKER
 PUP_CAGE_SHAKER_DESC,Erdbeben im Käfig! Schockwelle schleudert alle Gegner an die Banden!,Cage earthquake! Shockwave blasts all opponents into the walls!
 PUP_COLLECTED_TITLE,⚡ SPIELER %d: %s ⚡,⚡ PLAYER %d: %s ⚡
+THEME_INDUSTRIAL,Industrie-Käfig (Nacht),Industrial Cage (Night)
+THEME_SUNNY,Sonnendach (Sommer),Sunny Rooftop (Summer)
+THEME_CYBER,Cyber Neon (Synthwave),Cyber Neon (Synthwave)
+THEME_STATUS_BANNER,ARENA: %s,ARENA: %s
+LOBBY_THEME_BTN,"🏟️ [T] ARENA: %s","🏟️ [T] ARENA: %s"

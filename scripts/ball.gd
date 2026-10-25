@@ -131,6 +131,12 @@ func _setup_visuals() -> void:
 shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 
+uniform vec3 pent_color : source_color = vec3(0.12, 0.12, 0.14);
+uniform vec3 hex_color : source_color = vec3(0.96, 0.96, 0.97);
+uniform vec3 seam_color : source_color = vec3(0.06, 0.06, 0.08);
+uniform vec3 emission_color : source_color = vec3(0.0, 0.0, 0.0);
+uniform float emission_energy = 0.0;
+
 varying vec3 v_pos;
 
 const vec3 PENT_CENTERS[12] = vec3[12](
@@ -207,18 +213,22 @@ void fragment() {
 
 	if (seam_dist < seam_width) {
 		float seam_factor = smoothstep(0.0, seam_width, seam_dist);
-		vec3 base_col = is_pent ? vec3(0.12, 0.12, 0.14) : vec3(0.96, 0.96, 0.97);
-		ALBEDO = mix(vec3(0.06, 0.06, 0.08), base_col, seam_factor);
+		vec3 base_col = is_pent ? pent_color : hex_color;
+		ALBEDO = mix(seam_color, base_col, seam_factor);
 		ROUGHNESS = mix(0.9, 0.28, seam_factor);
 		METALLIC = 0.02;
 	} else if (is_pent) {
-		ALBEDO = vec3(0.12, 0.12, 0.14);
+		ALBEDO = pent_color;
 		ROUGHNESS = 0.32;
 		METALLIC = 0.04;
 	} else {
-		ALBEDO = vec3(0.96, 0.96, 0.97);
+		ALBEDO = hex_color;
 		ROUGHNESS = 0.25;
 		METALLIC = 0.03;
+	}
+
+	if (emission_energy > 0.01) {
+		EMISSION = emission_color * emission_energy;
 	}
 }
 """
@@ -227,6 +237,15 @@ void fragment() {
 		_mesh_instance.mesh = sphere
 		_mesh_instance.material_override = mat
 		add_child(_mesh_instance)
+
+func set_theme_colors(pent: Color, hex: Color, seam: Color, emissive: Color = Color.BLACK, emissive_energy: float = 0.0) -> void:
+	if _mesh_instance and _mesh_instance.material_override is ShaderMaterial:
+		var sm = _mesh_instance.material_override as ShaderMaterial
+		sm.set_shader_parameter("pent_color", Vector3(pent.r, pent.g, pent.b))
+		sm.set_shader_parameter("hex_color", Vector3(hex.r, hex.g, hex.b))
+		sm.set_shader_parameter("seam_color", Vector3(seam.r, seam.g, seam.b))
+		sm.set_shader_parameter("emission_color", Vector3(emissive.r, emissive.g, emissive.b))
+		sm.set_shader_parameter("emission_energy", emissive_energy)
 
 func reset_to_center() -> void:
 	_teleport_target = Vector3(0.0, CageConfig.BALL_RADIUS + 0.1, 0.0)

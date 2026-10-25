@@ -17,6 +17,7 @@ var camera: CageCamera = null
 var _turf_pool: Array[CPUParticles3D] = []
 var _turf_pool_size: int = 8
 var _current_turf_idx: int = 0
+var _turf_material: StandardMaterial3D = null
 
 # 2. Metall-Funken (Bande & Pfosten)
 var _spark_pool: Array[CPUParticles3D] = []
@@ -51,10 +52,10 @@ func _ready() -> void:
 func _setup_turf_pool() -> void:
 	var turf_mesh = BoxMesh.new()
 	turf_mesh.size = Vector3(0.08, 0.08, 0.08)
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(0.2, 0.75, 0.25)
-	mat.roughness = 0.8
-	turf_mesh.material = mat
+	_turf_material = StandardMaterial3D.new()
+	_turf_material.albedo_color = Color(0.2, 0.75, 0.25)
+	_turf_material.roughness = 0.8
+	turf_mesh.material = _turf_material
 	
 	for i in range(_turf_pool_size):
 		var p = CPUParticles3D.new()
@@ -74,6 +75,10 @@ func _setup_turf_pool() -> void:
 		p.scale_amount_max = 1.1
 		add_child(p)
 		_turf_pool.append(p)
+
+func set_turf_color(color: Color) -> void:
+	if _turf_material:
+		_turf_material.albedo_color = color
 
 func _setup_spark_pool() -> void:
 	var spark_mesh = BoxMesh.new()

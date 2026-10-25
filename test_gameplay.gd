@@ -8,6 +8,7 @@ const CageCamera = preload("res://scripts/cage_camera.gd")
 const MainCageFootball = preload("res://scenes/main.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
+const CageThemeManager = preload("res://scripts/cage_theme_manager.gd")
 
 func _init() -> void:
 	print("\n--- Running Headless Godot 4 Unit & Gameplay Tests for Crazy Cage Football ---")
@@ -22,6 +23,7 @@ func _init() -> void:
 	success = success and _test_cage_camera()
 	success = success and _test_main_scene()
 	success = success and _test_power_ups()
+	success = success and _test_theme_manager()
 	
 	if success:
 		print("=== ALL TESTS FOR CRAZY CAGE FOOTBALL PASSED SUCCESSFULLY! ===\n")
@@ -364,5 +366,68 @@ func _test_power_ups() -> bool:
 	
 	main_scene.queue_free()
 	print("  -> All 5 Power-Ups, Bot Awareness & Toggle verified successfully.")
+	return true
+
+func _test_theme_manager() -> bool:
+	print("[10/10] Testing CageThemeManager & Starter Arena Themes (Industrial, Sunny, Cyber)...")
+	var tm = CageThemeManager.new()
+	assert(tm.get_theme_count() == 3, "There should be exactly 3 starter themes")
+	var themes = tm.get_themes()
+	
+	var expected_ids = ["industrial", "sunny_rooftop", "cyber_neon"]
+	for id in expected_ids:
+		var found = false
+		for t in themes:
+			if str(t["id"]) == id:
+				found = true
+				assert(t.has("sun_color"), "Theme %s must have sun_color" % id)
+				assert(t.has("floor_color"), "Theme %s must have floor_color" % id)
+				assert(t.has("ball_pent_color"), "Theme %s must have ball_pent_color" % id)
+				assert(t.has("ball_hex_color"), "Theme %s must have ball_hex_color" % id)
+				assert(t.has("ball_seam_color"), "Theme %s must have ball_seam_color" % id)
+				assert(t.has("turf_puff_color"), "Theme %s must have turf_puff_color" % id)
+				break
+		assert(found, "Theme %s should exist in CageThemeManager" % id)
+	
+	# Test theme cycling
+	var t0 = tm.get_current_theme()
+	assert(str(t0["id"]) == "industrial", "Initial default theme should be industrial")
+	var t1 = tm.cycle_theme()
+	assert(str(t1["id"]) == "sunny_rooftop", "Second theme should be sunny_rooftop")
+	var t2 = tm.cycle_theme()
+	assert(str(t2["id"]) == "cyber_neon", "Third theme should be cyber_neon")
+	var t_wrap = tm.cycle_theme()
+	assert(str(t_wrap["id"]) == "industrial", "Cycle should wrap back to industrial")
+	
+	# Test live theme application in MainCageFootball
+	var main_scene = MainCageFootball.new()
+	root.add_child(main_scene)
+	main_scene._ready()
+	
+	assert(main_scene.theme_manager != null, "MainCageFootball should have theme_manager initialized")
+	assert(main_scene.floor_inst != null, "Floor MeshInstance3D should exist")
+	assert(main_scene.stadium_light != null, "StadiumLight should exist")
+	assert(main_scene.world_env != null, "WorldEnvironment should exist")
+	assert(main_scene.board_instances.size() > 0, "Board instances should be tracked")
+	assert(main_scene.fence_instances.size() > 0, "Fence instances should be tracked")
+	assert(main_scene.goal_post_instances.size() == 6, "All 6 goal post/bar instances should be tracked")
+	
+	# Switch to Sunny Rooftop
+	main_scene.theme_manager.set_theme_by_id("sunny_rooftop")
+	main_scene.apply_theme(main_scene.theme_manager.get_current_theme(), true)
+	var floor_mat_sunny = main_scene.floor_inst.material_override as StandardMaterial3D
+	assert(floor_mat_sunny != null, "Floor material should be StandardMaterial3D")
+	assert(floor_mat_sunny.roughness > 0.8, "Sunny rooftop floor roughness should match config")
+	
+	# Switch to Cyber Neon
+	main_scene.theme_manager.set_theme_by_id("cyber_neon")
+	main_scene.apply_theme(main_scene.theme_manager.get_current_theme(), true)
+	assert(main_scene.world_env.environment.glow_bloom > 0.3, "Cyber Neon glow bloom should be elevated")
+	
+	# Cycle via main method
+	main_scene.cycle_arena_theme()
+	
+	main_scene.queue_free()
+	print("  -> CageThemeManager, all 3 starter themes & live switching OK.")
 	return true
 

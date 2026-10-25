@@ -9,6 +9,15 @@ const CageCamera = preload("res://scripts/cage_camera.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CagePowerUp = preload("res://scripts/power_up.gd")
+const CageThemeManager = preload("res://scripts/cage_theme_manager.gd")
+
+var theme_manager: CageThemeManager
+var world_env: WorldEnvironment
+var stadium_light: DirectionalLight3D
+var floor_inst: MeshInstance3D
+var board_instances: Array[MeshInstance3D] = []
+var fence_instances: Array[MeshInstance3D] = []
+var goal_post_instances: Array[MeshInstance3D] = []
 
 var state_manager: CageStateManager
 var player1: CagePlayer
@@ -24,6 +33,7 @@ var juice_manager: CageJuiceManager
 
 var active_power_ups: Array[CagePowerUp] = []
 var _power_up_spawn_timer: float = 0.0
+var ui_theme_toggle_label: Label
 var ui_powerup_toggle_label: Label
 
 const BOARD_SPAWN_POINTS: Array[Vector3] = [
@@ -115,18 +125,18 @@ func _build_scene() -> void:
 	env.glow_intensity = 0.4
 	env.glow_bloom = 0.15
 	
-	var world_env = WorldEnvironment.new()
+	world_env = WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
 	add_child(world_env)
 	
-	var sun = DirectionalLight3D.new()
-	sun.name = "StadiumLight"
-	sun.position = Vector3(15, 25, 15)
-	sun.rotation_degrees = Vector3(-55, 40, 0)
-	sun.light_energy = 1.3
-	sun.shadow_enabled = true
-	add_child(sun)
+	stadium_light = DirectionalLight3D.new()
+	stadium_light.name = "StadiumLight"
+	stadium_light.position = Vector3(15, 25, 15)
+	stadium_light.rotation_degrees = Vector3(-55, 40, 0)
+	stadium_light.light_energy = 1.3
+	stadium_light.shadow_enabled = true
+	add_child(stadium_light)
 	
 	# 2. Boden (Authentischer Street-Soccer Cage-Kunstrasen)
 	var floor_body = StaticBody3D.new()
@@ -145,7 +155,7 @@ func _build_scene() -> void:
 	floor_col.shape.size = floor_box.size
 	floor_body.add_child(floor_col)
 	
-	var floor_inst = MeshInstance3D.new()
+	floor_inst = MeshInstance3D.new()
 	floor_inst.mesh = floor_box
 	var floor_mat = StandardMaterial3D.new()
 	var turf_path = "res://assets/textures/pitch_turf.jpg"
@@ -225,6 +235,10 @@ func _build_scene() -> void:
 	juice_manager.name = "CageJuiceManager"
 	juice_manager.camera = camera
 	add_child(juice_manager)
+	
+	# 9. Theme Manager & Initiale Theme-Anwendung
+	theme_manager = CageThemeManager.get_instance()
+	apply_theme(theme_manager.get_current_theme(), false)
 
 func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: Color = Color(0.75, 0.8, 0.85, 0.75)) -> void:
 	var body = StaticBody3D.new()
@@ -268,6 +282,7 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 		board_mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 		board_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 		board_inst.material_override = board_mat
+		board_instances.append(board_inst)
 		body.add_child(board_inst)
 	
 	# 2. Drahtgitter-Käfigwand oberhalb der Bande
@@ -298,6 +313,7 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 		mat.roughness = 0.3
 	fence_inst.material_override = mat
+	fence_instances.append(fence_inst)
 	body.add_child(fence_inst)
 	add_child(body)
 
@@ -391,6 +407,7 @@ func _build_goal_posts(side: int) -> void:
 	cyl_n.height = CageConfig.GOAL_HEIGHT
 	post_n_mesh.mesh = cyl_n
 	post_n_mesh.material_override = post_mat
+	goal_post_instances.append(post_n_mesh)
 	post_n_body.add_child(post_n_mesh)
 	add_child(post_n_body)
 	
@@ -414,6 +431,7 @@ func _build_goal_posts(side: int) -> void:
 	cyl_s.height = CageConfig.GOAL_HEIGHT
 	post_s_mesh.mesh = cyl_s
 	post_s_mesh.material_override = post_mat
+	goal_post_instances.append(post_s_mesh)
 	post_s_body.add_child(post_s_mesh)
 	add_child(post_s_body)
 	
@@ -438,6 +456,7 @@ func _build_goal_posts(side: int) -> void:
 	cyl_bar.height = CageConfig.GOAL_WIDTH
 	crossbar_mesh.mesh = cyl_bar
 	crossbar_mesh.material_override = post_mat
+	goal_post_instances.append(crossbar_mesh)
 	bar_body.add_child(crossbar_mesh)
 	add_child(bar_body)
 
@@ -481,6 +500,7 @@ func _build_corner_bumpers() -> void:
 		mat.metallic = 0.4
 		mat.roughness = 0.35
 		mesh_inst.material_override = mat
+		board_instances.append(mesh_inst)
 		body.add_child(mesh_inst)
 		
 		add_child(body)
@@ -646,12 +666,30 @@ func _build_ui() -> void:
 		card.add_child(key_hint)
 		ui_key_hint_labels.append(key_hint)
 	
+	ui_theme_toggle_label = Label.new()
+	ui_theme_toggle_label.position = Vector2(100, 520)
+	ui_theme_toggle_label.size = Vector2(1080, 36)
+	ui_theme_toggle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_theme_toggle_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ui_theme_toggle_label.add_theme_font_size_override("font_size", 21)
+	ui_theme_toggle_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	ui_theme_toggle_label.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			cycle_arena_theme()
+	)
+	ui_lobby_panel.add_child(ui_theme_toggle_label)
+
 	ui_powerup_toggle_label = Label.new()
-	ui_powerup_toggle_label.position = Vector2(100, 550)
-	ui_powerup_toggle_label.size = Vector2(1080, 45)
+	ui_powerup_toggle_label.position = Vector2(100, 560)
+	ui_powerup_toggle_label.size = Vector2(1080, 36)
 	ui_powerup_toggle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ui_powerup_toggle_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	ui_powerup_toggle_label.add_theme_font_size_override("font_size", 21)
+	ui_powerup_toggle_label.add_theme_font_size_override("font_size", 20)
+	ui_powerup_toggle_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	ui_powerup_toggle_label.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			toggle_powerups()
+	)
 	ui_lobby_panel.add_child(ui_powerup_toggle_label)
 	
 	_update_lobby_ui()
@@ -690,6 +728,15 @@ func _update_lobby_ui() -> void:
 			else:
 				ui_team_labels[i].text = tr("TEAM_BLUE_LBL")
 				ui_team_labels[i].add_theme_color_override("font_color", Color(0.3, 0.6, 1.0))
+	
+	if ui_theme_toggle_label and theme_manager:
+		var cur_theme = theme_manager.get_current_theme()
+		var dname = theme_manager.get_theme_display_name(cur_theme)
+		var btn_fmt = tr("LOBBY_THEME_BTN")
+		if not ("%s" in btn_fmt):
+			btn_fmt = "🏟️ [T] ARENA: %s"
+		ui_theme_toggle_label.text = btn_fmt % dname
+		ui_theme_toggle_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.35))
 	
 	if ui_powerup_toggle_label:
 		if CageConfig.powerups_enabled:
@@ -758,6 +805,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		elif event.keycode == KEY_F11:
 			toggle_fullscreen()
+			return
+		elif event.keycode == KEY_T:
+			cycle_arena_theme()
 			return
 			
 		if state_manager.current_state == CageStateManager.MatchState.LOBBY:
@@ -829,6 +879,131 @@ func toggle_fullscreen() -> void:
 		ui_banner_label.text = tr("FULLSCREEN_OFF") if is_fs else tr("FULLSCREEN_ON")
 		var tween = create_tween()
 		tween.tween_interval(1.2)
+		tween.tween_callback(func():
+			if is_instance_valid(ui_banner_label) and (state_manager.current_state == CageStateManager.MatchState.PLAYING or state_manager.current_state == CageStateManager.MatchState.LOBBY):
+				ui_banner_label.visible = false
+		)
+
+func cycle_arena_theme() -> void:
+	if not theme_manager:
+		theme_manager = CageThemeManager.get_instance()
+	var next_theme = theme_manager.cycle_theme()
+	apply_theme(next_theme, true)
+
+func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
+	if t.is_empty():
+		return
+		
+	# 1. World Environment & Sky
+	if world_env and world_env.environment:
+		var env = world_env.environment
+		var sky_type = str(t.get("sky_type", "procedural"))
+		if sky_type == "panorama":
+			var skybox_path = str(t.get("skybox_path", ""))
+			if ResourceLoader.exists(skybox_path):
+				var pano = PanoramaSkyMaterial.new()
+				pano.panorama = load(skybox_path)
+				var sky = Sky.new()
+				sky.sky_material = pano
+				env.sky = sky
+				env.background_mode = Environment.BG_SKY
+		else:
+			var proc = ProceduralSkyMaterial.new()
+			proc.sky_top_color = t.get("sky_top_color", Color(0.35, 0.65, 0.95))
+			proc.sky_horizon_color = t.get("sky_horizon_color", Color(0.75, 0.88, 1.0))
+			proc.ground_bottom_color = t.get("ground_bottom_color", Color(0.4, 0.35, 0.3))
+			proc.ground_horizon_color = t.get("ground_horizon_color", Color(0.7, 0.8, 0.9))
+			var sky = Sky.new()
+			sky.sky_material = proc
+			env.sky = sky
+			env.background_mode = Environment.BG_SKY
+			
+		env.glow_bloom = float(t.get("glow_bloom", 0.15))
+		env.glow_intensity = float(t.get("glow_intensity", 0.4))
+		env.ambient_light_color = t.get("ambient_color", Color(0.2, 0.22, 0.28))
+		env.ambient_light_energy = float(t.get("ambient_energy", 0.5))
+
+	# 2. Stadium Light
+	if stadium_light:
+		stadium_light.light_color = t.get("sun_color", Color.WHITE)
+		stadium_light.light_energy = float(t.get("sun_energy", 1.3))
+		stadium_light.rotation_degrees = t.get("sun_rotation", Vector3(-55, 40, 0))
+
+	# 3. Floor
+	if floor_inst:
+		var floor_mat = StandardMaterial3D.new()
+		var tex_path = str(t.get("floor_texture", ""))
+		if not tex_path.is_empty() and ResourceLoader.exists(tex_path):
+			floor_mat.albedo_texture = load(tex_path)
+			floor_mat.uv1_scale = t.get("floor_uv_scale", Vector3(10.0, 6.0, 1.0))
+		else:
+			floor_mat.albedo_color = t.get("floor_color", Color(0.28, 0.32, 0.36))
+		floor_mat.roughness = float(t.get("floor_roughness", 0.75))
+		floor_mat.metallic = float(t.get("floor_metallic", 0.05))
+		floor_inst.material_override = floor_mat
+
+	# 4. Boards
+	for b in board_instances:
+		if is_instance_valid(b):
+			var b_mat = StandardMaterial3D.new()
+			b_mat.albedo_color = t.get("board_color", Color(0.18, 0.2, 0.24))
+			b_mat.roughness = float(t.get("board_roughness", 0.3))
+			b_mat.metallic = float(t.get("board_metallic", 0.6))
+			b_mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+			b_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
+			b.material_override = b_mat
+
+	# 5. Fences
+	for f in fence_instances:
+		if is_instance_valid(f):
+			var f_mat = StandardMaterial3D.new()
+			var fence_path = str(t.get("fence_texture", ""))
+			if not fence_path.is_empty() and ResourceLoader.exists(fence_path):
+				f_mat.albedo_texture = load(fence_path)
+				f_mat.uv1_scale = f.material_override.uv1_scale if f.material_override else Vector3(4.0, 2.0, 1.0)
+			f_mat.albedo_color = t.get("fence_color", Color(0.75, 0.8, 0.85, 0.75))
+			f_mat.roughness = float(t.get("fence_roughness", 0.25))
+			f_mat.metallic = float(t.get("fence_metallic", 0.85))
+			f_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			f_mat.alpha_scissor_threshold = 0.25
+			f_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
+			f_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+			f.material_override = f_mat
+
+	# 6. Goal Posts
+	for p in goal_post_instances:
+		if is_instance_valid(p):
+			var p_mat = StandardMaterial3D.new()
+			p_mat.albedo_color = t.get("goal_post_color", Color(0.95, 0.95, 0.95))
+			p_mat.roughness = 0.2
+			p_mat.metallic = 0.8
+			p.material_override = p_mat
+
+	# 7. Ball
+	if ball and ball.has_method("set_theme_colors"):
+		ball.set_theme_colors(
+			t.get("ball_pent_color", Color(0.12, 0.12, 0.14)),
+			t.get("ball_hex_color", Color(0.96, 0.96, 0.97)),
+			t.get("ball_seam_color", Color(0.06, 0.06, 0.08)),
+			t.get("ball_emission_color", Color.BLACK),
+			float(t.get("ball_emission_energy", 0.0))
+		)
+
+	# 8. Juice Manager
+	if juice_manager and juice_manager.has_method("set_turf_color"):
+		juice_manager.set_turf_color(t.get("turf_puff_color", Color(0.2, 0.75, 0.25)))
+
+	_update_lobby_ui()
+
+	if is_live_switch and ui_banner_label:
+		var dname = CageThemeManager.get_instance().get_theme_display_name(t)
+		ui_banner_label.visible = true
+		var banner_fmt = tr("THEME_STATUS_BANNER")
+		if not ("%s" in banner_fmt):
+			banner_fmt = "ARENA: %s"
+		ui_banner_label.text = banner_fmt % dname
+		var tween = create_tween()
+		tween.tween_interval(1.4)
 		tween.tween_callback(func():
 			if is_instance_valid(ui_banner_label) and (state_manager.current_state == CageStateManager.MatchState.PLAYING or state_manager.current_state == CageStateManager.MatchState.LOBBY):
 				ui_banner_label.visible = false
