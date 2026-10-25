@@ -10,8 +10,11 @@ const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CagePowerUp = preload("res://scripts/power_up.gd")
 const CageThemeManager = preload("res://scripts/cage_theme_manager.gd")
+const CageMatchStats = preload("res://scripts/match_stats.gd")
 
 var theme_manager: CageThemeManager
+var match_stats: CageMatchStats
+var is_game_paused: bool = false
 var world_env: WorldEnvironment
 var stadium_light: DirectionalLight3D
 var floor_inst: MeshInstance3D
@@ -64,6 +67,36 @@ var ui_hint_label: Label
 var ui_card_slot_titles: Array[Label] = []
 var ui_key_hint_labels: Array[Label] = []
 
+# Pause & Options Menu
+var ui_pause_container: Control
+var ui_pause_title_lbl: Label
+var ui_pause_options_title_lbl: Label
+var ui_master_lbl: Label
+var ui_bgm_lbl: Label
+var ui_sfx_lbl: Label
+var ui_master_slider: HSlider
+var ui_bgm_slider: HSlider
+var ui_sfx_slider: HSlider
+var ui_pause_resume_btn: Button
+var ui_pause_restart_btn: Button
+var ui_pause_theme_btn: Button
+var ui_pause_lang_btn: Button
+var ui_pause_fs_btn: Button
+var ui_pause_lobby_btn: Button
+var ui_pause_ctrl_title_lbl: Label
+var ui_pause_ctrl_p1_lbl: Label
+var ui_pause_ctrl_p2_lbl: Label
+var ui_pause_ctrl_gp_lbl: Label
+
+# Match End Stats Menu
+var ui_stats_container: Control
+var ui_stats_title_lbl: Label
+var ui_stats_winner_lbl: Label
+var ui_stats_score_lbl: Label
+var ui_stats_rematch_btn: Button
+var ui_stats_lobby_btn: Button
+var ui_stats_row_labels: Dictionary = {}
+
 const SLOT_CONTROL_OPTIONS = [
 	CagePlayer.ControlType.HUMAN_KB1,
 	CagePlayer.ControlType.HUMAN_KB2,
@@ -76,6 +109,7 @@ const SLOT_CONTROL_OPTIONS = [
 ]
 
 func _ready() -> void:
+	match_stats = CageMatchStats.new()
 	_init_translations()
 	state_manager = CageStateManager.new()
 	state_manager.state_changed.connect(_on_state_changed)
@@ -204,6 +238,7 @@ func _build_scene() -> void:
 	ball = SoccerBall.new()
 	ball.name = "SoccerBall"
 	ball.position = Vector3(0.0, CageConfig.BALL_RADIUS + 0.1, 0.0)
+	ball.post_hit.connect(_on_ball_post_hit)
 	add_child(ball)
 	
 	# 6. Spieler 1 bis 4 (2v2 Team Setup)
@@ -224,6 +259,9 @@ func _build_scene() -> void:
 		p.position = cfg["pos"]
 		p.target_ball = ball
 		p.set_control_type(cfg["ctrl"])
+		p.jumped.connect(_on_player_jumped)
+		p.tackled.connect(_on_player_tackled)
+		p.ball_hit.connect(_on_player_ball_hit)
 		add_child(p)
 		players.append(p)
 	
@@ -790,7 +828,520 @@ func _build_ui() -> void:
 	
 	_update_lobby_ui()
 	canvas.add_child(ui_lobby_panel)
+	_build_pause_menu(canvas)
+	_build_stats_menu(canvas)
 	add_child(canvas)
+
+func _create_styled_button(text: String, font_size: int = 18, bg_col: Color = Color(0.14, 0.20, 0.32, 0.95)) -> Button:
+	var btn = Button.new()
+	btn.text = text
+	btn.add_theme_font_size_override("font_size", font_size)
+	var normal_sb = StyleBoxFlat.new()
+	normal_sb.bg_color = bg_col
+	normal_sb.corner_radius_top_left = 6
+	normal_sb.corner_radius_top_right = 6
+	normal_sb.corner_radius_bottom_left = 6
+	normal_sb.corner_radius_bottom_right = 6
+	normal_sb.border_width_left = 2
+	normal_sb.border_width_top = 2
+	normal_sb.border_width_right = 2
+	normal_sb.border_width_bottom = 2
+	normal_sb.border_color = Color(0.3, 0.6, 0.9, 0.7)
+	btn.add_theme_stylebox_override("normal", normal_sb)
+	
+	var hover_sb = normal_sb.duplicate() as StyleBoxFlat
+	hover_sb.bg_color = bg_col.lightened(0.25)
+	hover_sb.border_color = Color(0.5, 0.85, 1.0, 1.0)
+	btn.add_theme_stylebox_override("hover", hover_sb)
+	btn.add_theme_stylebox_override("pressed", hover_sb)
+	btn.add_theme_stylebox_override("focus", hover_sb)
+	return btn
+
+func _build_pause_menu(canvas: CanvasLayer) -> void:
+	ui_pause_container = Control.new()
+	ui_pause_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui_pause_container.visible = false
+	ui_pause_container.mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	var backdrop = ColorRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color(0.04, 0.07, 0.12, 0.88)
+	ui_pause_container.add_child(backdrop)
+	
+	var panel = Panel.new()
+	panel.position = Vector2(300, 70)
+	panel.size = Vector2(680, 580)
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.11, 0.18, 0.96)
+	sb.border_width_left = 3
+	sb.border_width_top = 3
+	sb.border_width_right = 3
+	sb.border_width_bottom = 3
+	sb.border_color = Color(0.2, 0.75, 1.0, 0.85)
+	sb.corner_radius_top_left = 12
+	sb.corner_radius_top_right = 12
+	sb.corner_radius_bottom_left = 12
+	sb.corner_radius_bottom_right = 12
+	panel.add_theme_stylebox_override("panel", sb)
+	ui_pause_container.add_child(panel)
+	
+	ui_pause_title_lbl = Label.new()
+	ui_pause_title_lbl.text = tr("PAUSE_TITLE")
+	ui_pause_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_pause_title_lbl.position = Vector2(20, 16)
+	ui_pause_title_lbl.size = Vector2(640, 42)
+	ui_pause_title_lbl.add_theme_font_size_override("font_size", 32)
+	ui_pause_title_lbl.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
+	panel.add_child(ui_pause_title_lbl)
+	
+	ui_pause_options_title_lbl = Label.new()
+	ui_pause_options_title_lbl.text = tr("OPTIONS_TITLE")
+	ui_pause_options_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_pause_options_title_lbl.position = Vector2(20, 64)
+	ui_pause_options_title_lbl.size = Vector2(640, 24)
+	ui_pause_options_title_lbl.add_theme_font_size_override("font_size", 16)
+	ui_pause_options_title_lbl.add_theme_color_override("font_color", Color(0.7, 0.8, 0.95))
+	panel.add_child(ui_pause_options_title_lbl)
+	
+	var slider_start_y = 100
+	ui_master_lbl = Label.new()
+	ui_master_lbl.position = Vector2(40, slider_start_y)
+	ui_master_lbl.size = Vector2(240, 28)
+	ui_master_lbl.add_theme_font_size_override("font_size", 16)
+	panel.add_child(ui_master_lbl)
+	
+	ui_master_slider = HSlider.new()
+	ui_master_slider.position = Vector2(290, slider_start_y + 4)
+	ui_master_slider.size = Vector2(340, 24)
+	ui_master_slider.min_value = 0.0
+	ui_master_slider.max_value = 1.0
+	ui_master_slider.step = 0.05
+	ui_master_slider.value = 1.0
+	ui_master_slider.value_changed.connect(func(val: float):
+		if sound_manager:
+			sound_manager.set_master_volume(val)
+		_update_volume_labels()
+	)
+	panel.add_child(ui_master_slider)
+	
+	ui_bgm_lbl = Label.new()
+	ui_bgm_lbl.position = Vector2(40, slider_start_y + 40)
+	ui_bgm_lbl.size = Vector2(240, 28)
+	ui_bgm_lbl.add_theme_font_size_override("font_size", 16)
+	panel.add_child(ui_bgm_lbl)
+	
+	ui_bgm_slider = HSlider.new()
+	ui_bgm_slider.position = Vector2(290, slider_start_y + 44)
+	ui_bgm_slider.size = Vector2(340, 24)
+	ui_bgm_slider.min_value = 0.0
+	ui_bgm_slider.max_value = 1.0
+	ui_bgm_slider.step = 0.05
+	ui_bgm_slider.value = 0.75
+	ui_bgm_slider.value_changed.connect(func(val: float):
+		if sound_manager:
+			sound_manager.set_bgm_volume(val)
+		_update_volume_labels()
+	)
+	panel.add_child(ui_bgm_slider)
+	
+	ui_sfx_lbl = Label.new()
+	ui_sfx_lbl.position = Vector2(40, slider_start_y + 80)
+	ui_sfx_lbl.size = Vector2(240, 28)
+	ui_sfx_lbl.add_theme_font_size_override("font_size", 16)
+	panel.add_child(ui_sfx_lbl)
+	
+	ui_sfx_slider = HSlider.new()
+	ui_sfx_slider.position = Vector2(290, slider_start_y + 84)
+	ui_sfx_slider.size = Vector2(340, 24)
+	ui_sfx_slider.min_value = 0.0
+	ui_sfx_slider.max_value = 1.0
+	ui_sfx_slider.step = 0.05
+	ui_sfx_slider.value = 1.0
+	ui_sfx_slider.value_changed.connect(func(val: float):
+		if sound_manager:
+			sound_manager.set_sfx_volume(val)
+		_update_volume_labels()
+	)
+	panel.add_child(ui_sfx_slider)
+	
+	_update_volume_labels()
+	
+	var btn_y = 235
+	var bw = 285
+	var bh = 42
+	
+	ui_pause_resume_btn = _create_styled_button(tr("PAUSE_RESUME"), 17, Color(0.12, 0.28, 0.22, 0.95))
+	ui_pause_resume_btn.position = Vector2(40, btn_y)
+	ui_pause_resume_btn.size = Vector2(bw, bh)
+	ui_pause_resume_btn.pressed.connect(func():
+		toggle_pause()
+	)
+	panel.add_child(ui_pause_resume_btn)
+	
+	ui_pause_restart_btn = _create_styled_button(tr("PAUSE_RESTART"), 17, Color(0.28, 0.18, 0.12, 0.95))
+	ui_pause_restart_btn.position = Vector2(350, btn_y)
+	ui_pause_restart_btn.size = Vector2(bw, bh)
+	ui_pause_restart_btn.pressed.connect(func():
+		toggle_pause()
+		restart_game()
+	)
+	panel.add_child(ui_pause_restart_btn)
+	
+	ui_pause_theme_btn = _create_styled_button("🏟️ [T] ARENA", 16)
+	ui_pause_theme_btn.position = Vector2(40, btn_y + 50)
+	ui_pause_theme_btn.size = Vector2(bw, bh)
+	ui_pause_theme_btn.pressed.connect(func():
+		cycle_arena_theme()
+		_update_pause_buttons_text()
+	)
+	panel.add_child(ui_pause_theme_btn)
+	
+	ui_pause_lang_btn = _create_styled_button("🌐 [L] DE / EN", 16)
+	ui_pause_lang_btn.position = Vector2(350, btn_y + 50)
+	ui_pause_lang_btn.size = Vector2(bw, bh)
+	ui_pause_lang_btn.pressed.connect(func():
+		toggle_language()
+		_update_pause_buttons_text()
+	)
+	panel.add_child(ui_pause_lang_btn)
+	
+	ui_pause_fs_btn = _create_styled_button("🖥️ [F11] VOLLBILD", 16)
+	ui_pause_fs_btn.position = Vector2(40, btn_y + 100)
+	ui_pause_fs_btn.size = Vector2(bw, bh)
+	ui_pause_fs_btn.pressed.connect(func():
+		toggle_fullscreen()
+		_update_pause_buttons_text()
+	)
+	panel.add_child(ui_pause_fs_btn)
+	
+	ui_pause_lobby_btn = _create_styled_button(tr("PAUSE_LOBBY"), 16, Color(0.25, 0.10, 0.10, 0.95))
+	ui_pause_lobby_btn.position = Vector2(350, btn_y + 100)
+	ui_pause_lobby_btn.size = Vector2(bw, bh)
+	ui_pause_lobby_btn.pressed.connect(func():
+		toggle_pause()
+		return_to_lobby()
+	)
+	panel.add_child(ui_pause_lobby_btn)
+	
+	ui_pause_ctrl_title_lbl = Label.new()
+	ui_pause_ctrl_title_lbl.text = tr("CONTROLS_TITLE")
+	ui_pause_ctrl_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_pause_ctrl_title_lbl.position = Vector2(20, 395)
+	ui_pause_ctrl_title_lbl.size = Vector2(640, 24)
+	ui_pause_ctrl_title_lbl.add_theme_font_size_override("font_size", 15)
+	ui_pause_ctrl_title_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	panel.add_child(ui_pause_ctrl_title_lbl)
+	
+	ui_pause_ctrl_p1_lbl = Label.new()
+	ui_pause_ctrl_p1_lbl.text = tr("CONTROLS_P1")
+	ui_pause_ctrl_p1_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_pause_ctrl_p1_lbl.position = Vector2(20, 424)
+	ui_pause_ctrl_p1_lbl.size = Vector2(640, 22)
+	ui_pause_ctrl_p1_lbl.add_theme_font_size_override("font_size", 14)
+	panel.add_child(ui_pause_ctrl_p1_lbl)
+	
+	ui_pause_ctrl_p2_lbl = Label.new()
+	ui_pause_ctrl_p2_lbl.text = tr("CONTROLS_P2")
+	ui_pause_ctrl_p2_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_pause_ctrl_p2_lbl.position = Vector2(20, 448)
+	ui_pause_ctrl_p2_lbl.size = Vector2(640, 22)
+	ui_pause_ctrl_p2_lbl.add_theme_font_size_override("font_size", 14)
+	panel.add_child(ui_pause_ctrl_p2_lbl)
+	
+	ui_pause_ctrl_gp_lbl = Label.new()
+	ui_pause_ctrl_gp_lbl.text = tr("CONTROLS_GAMEPAD")
+	ui_pause_ctrl_gp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_pause_ctrl_gp_lbl.position = Vector2(20, 472)
+	ui_pause_ctrl_gp_lbl.size = Vector2(640, 22)
+	ui_pause_ctrl_gp_lbl.add_theme_font_size_override("font_size", 14)
+	panel.add_child(ui_pause_ctrl_gp_lbl)
+	
+	canvas.add_child(ui_pause_container)
+
+func _build_stats_menu(canvas: CanvasLayer) -> void:
+	ui_stats_container = Control.new()
+	ui_stats_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui_stats_container.visible = false
+	ui_stats_container.mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	var backdrop = ColorRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color(0.03, 0.05, 0.08, 0.92)
+	ui_stats_container.add_child(backdrop)
+	
+	var panel = Panel.new()
+	panel.position = Vector2(240, 50)
+	panel.size = Vector2(800, 620)
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.09, 0.15, 0.98)
+	sb.border_width_left = 3
+	sb.border_width_top = 3
+	sb.border_width_right = 3
+	sb.border_width_bottom = 3
+	sb.border_color = Color(1.0, 0.82, 0.22, 0.95)
+	sb.corner_radius_top_left = 14
+	sb.corner_radius_top_right = 14
+	sb.corner_radius_bottom_left = 14
+	sb.corner_radius_bottom_right = 14
+	panel.add_theme_stylebox_override("panel", sb)
+	ui_stats_container.add_child(panel)
+	
+	ui_stats_title_lbl = Label.new()
+	ui_stats_title_lbl.text = tr("STATS_TITLE")
+	ui_stats_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_stats_title_lbl.position = Vector2(20, 14)
+	ui_stats_title_lbl.size = Vector2(760, 36)
+	ui_stats_title_lbl.add_theme_font_size_override("font_size", 26)
+	ui_stats_title_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
+	panel.add_child(ui_stats_title_lbl)
+	
+	ui_stats_winner_lbl = Label.new()
+	ui_stats_winner_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_stats_winner_lbl.position = Vector2(20, 52)
+	ui_stats_winner_lbl.size = Vector2(760, 38)
+	ui_stats_winner_lbl.add_theme_font_size_override("font_size", 28)
+	panel.add_child(ui_stats_winner_lbl)
+	
+	ui_stats_score_lbl = Label.new()
+	ui_stats_score_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_stats_score_lbl.position = Vector2(20, 92)
+	ui_stats_score_lbl.size = Vector2(760, 42)
+	ui_stats_score_lbl.add_theme_font_size_override("font_size", 34)
+	panel.add_child(ui_stats_score_lbl)
+	
+	var th_y = 145
+	var th_red = Label.new()
+	th_red.text = "🔴 " + tr("TEAM_RED_LBL")
+	th_red.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	th_red.position = Vector2(30, th_y)
+	th_red.size = Vector2(200, 28)
+	th_red.add_theme_font_size_override("font_size", 18)
+	th_red.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+	panel.add_child(th_red)
+	
+	var th_mid = Label.new()
+	th_mid.text = "KATEGORIE"
+	th_mid.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	th_mid.position = Vector2(250, th_y)
+	th_mid.size = Vector2(300, 28)
+	th_mid.add_theme_font_size_override("font_size", 16)
+	th_mid.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	panel.add_child(th_mid)
+	
+	var th_blue = Label.new()
+	th_blue.text = "🔵 " + tr("TEAM_BLUE_LBL")
+	th_blue.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	th_blue.position = Vector2(570, th_y)
+	th_blue.size = Vector2(200, 28)
+	th_blue.add_theme_font_size_override("font_size", 18)
+	th_blue.add_theme_color_override("font_color", Color(0.35, 0.65, 1.0))
+	panel.add_child(th_blue)
+	
+	var rows = [
+		{"key": "goals", "tr_key": "STATS_GOALS"},
+		{"key": "shots", "tr_key": "STATS_SHOTS"},
+		{"key": "posts", "tr_key": "STATS_POST_HITS"},
+		{"key": "powerups", "tr_key": "STATS_POWERUPS"},
+		{"key": "jumps", "tr_key": "STATS_JUMPS"},
+		{"key": "tackles", "tr_key": "STATS_TACKLES"},
+		{"key": "possession", "tr_key": "STATS_POSSESSION"},
+		{"key": "speed", "tr_key": "STATS_TOP_SPEED"}
+	]
+	
+	ui_stats_row_labels.clear()
+	var row_y = 178
+	for r in rows:
+		var r_bg = ColorRect.new()
+		r_bg.position = Vector2(30, row_y)
+		r_bg.size = Vector2(740, 32)
+		r_bg.color = Color(0.12, 0.16, 0.24, 0.45) if (ui_stats_row_labels.size() % 2 == 0) else Color(0.08, 0.11, 0.18, 0.25)
+		panel.add_child(r_bg)
+		
+		var l_red = Label.new()
+		l_red.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l_red.position = Vector2(30, row_y)
+		l_red.size = Vector2(200, 32)
+		l_red.add_theme_font_size_override("font_size", 18)
+		panel.add_child(l_red)
+		
+		var l_title = Label.new()
+		l_title.text = tr(r["tr_key"])
+		l_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l_title.position = Vector2(250, row_y)
+		l_title.size = Vector2(300, 32)
+		l_title.add_theme_font_size_override("font_size", 16)
+		l_title.add_theme_color_override("font_color", Color(0.85, 0.90, 0.95))
+		panel.add_child(l_title)
+		
+		var l_blue = Label.new()
+		l_blue.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l_blue.position = Vector2(570, row_y)
+		l_blue.size = Vector2(200, 32)
+		l_blue.add_theme_font_size_override("font_size", 18)
+		panel.add_child(l_blue)
+		
+		ui_stats_row_labels[r["key"]] = {
+			"red": l_red,
+			"title": l_title,
+			"blue": l_blue,
+			"tr_key": r["tr_key"]
+		}
+		row_y += 36
+	
+	var btn_y2 = 545
+	ui_stats_rematch_btn = _create_styled_button(tr("BTN_REMATCH"), 18, Color(0.14, 0.32, 0.18, 0.95))
+	ui_stats_rematch_btn.position = Vector2(100, btn_y2)
+	ui_stats_rematch_btn.size = Vector2(270, 48)
+	ui_stats_rematch_btn.pressed.connect(func():
+		if sound_manager:
+			sound_manager.play_ui_click()
+		ui_stats_container.visible = false
+		restart_game()
+	)
+	panel.add_child(ui_stats_rematch_btn)
+	
+	ui_stats_lobby_btn = _create_styled_button(tr("BTN_LOBBY"), 18, Color(0.28, 0.15, 0.15, 0.95))
+	ui_stats_lobby_btn.position = Vector2(430, btn_y2)
+	ui_stats_lobby_btn.size = Vector2(270, 48)
+	ui_stats_lobby_btn.pressed.connect(func():
+		if sound_manager:
+			sound_manager.play_ui_click()
+		ui_stats_container.visible = false
+		return_to_lobby()
+	)
+	panel.add_child(ui_stats_lobby_btn)
+	
+	canvas.add_child(ui_stats_container)
+
+func _update_volume_labels() -> void:
+	if ui_master_lbl and ui_master_slider:
+		ui_master_lbl.text = tr("VOL_MASTER") + ": %d%%" % int(ui_master_slider.value * 100)
+	if ui_bgm_lbl and ui_bgm_slider:
+		ui_bgm_lbl.text = tr("VOL_BGM") + ": %d%%" % int(ui_bgm_slider.value * 100)
+	if ui_sfx_lbl and ui_sfx_slider:
+		ui_sfx_lbl.text = tr("VOL_SFX") + ": %d%%" % int(ui_sfx_slider.value * 100)
+
+func _update_pause_buttons_text() -> void:
+	if ui_pause_resume_btn:
+		ui_pause_resume_btn.text = tr("PAUSE_RESUME")
+	if ui_pause_restart_btn:
+		ui_pause_restart_btn.text = tr("PAUSE_RESTART")
+	if ui_pause_lobby_btn:
+		ui_pause_lobby_btn.text = tr("PAUSE_LOBBY")
+	if ui_pause_theme_btn and theme_manager:
+		var cur = theme_manager.get_current_theme()
+		var dname = theme_manager.get_theme_display_name(cur)
+		ui_pause_theme_btn.text = "🏟️ [T] " + dname
+	if ui_pause_lang_btn:
+		var cur_loc = TranslationServer.get_locale().to_upper()
+		ui_pause_lang_btn.text = "🌐 [L] " + cur_loc
+	if ui_pause_fs_btn:
+		var mode = DisplayServer.window_get_mode()
+		var is_fs = (mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+		ui_pause_fs_btn.text = "🖥️ [F11] " + (tr("FULLSCREEN_ON") if is_fs else tr("FULLSCREEN_OFF"))
+	if ui_pause_ctrl_title_lbl:
+		ui_pause_ctrl_title_lbl.text = tr("CONTROLS_TITLE")
+	if ui_pause_ctrl_p1_lbl:
+		ui_pause_ctrl_p1_lbl.text = tr("CONTROLS_P1")
+	if ui_pause_ctrl_p2_lbl:
+		ui_pause_ctrl_p2_lbl.text = tr("CONTROLS_P2")
+	if ui_pause_ctrl_gp_lbl:
+		ui_pause_ctrl_gp_lbl.text = tr("CONTROLS_GAMEPAD")
+	if ui_pause_title_lbl:
+		ui_pause_title_lbl.text = tr("PAUSE_TITLE")
+	if ui_pause_options_title_lbl:
+		ui_pause_options_title_lbl.text = tr("OPTIONS_TITLE")
+
+func toggle_pause() -> void:
+	if state_manager.current_state == CageStateManager.MatchState.LOBBY or state_manager.current_state == CageStateManager.MatchState.MATCH_OVER:
+		return
+	is_game_paused = !is_game_paused
+	if ui_pause_container:
+		ui_pause_container.visible = is_game_paused
+		if is_game_paused:
+			_update_volume_labels()
+			_update_pause_buttons_text()
+	for p in players:
+		p.freeze = is_game_paused
+	if ball:
+		ball.freeze = is_game_paused
+	if sound_manager:
+		sound_manager.play_ui_click()
+
+func show_match_stats() -> void:
+	if not ui_stats_container:
+		return
+	
+	if ui_banner_label:
+		ui_banner_label.visible = false
+	
+	var w = state_manager.get_winner()
+	if ui_stats_winner_lbl:
+		if w == 1:
+			ui_stats_winner_lbl.text = "🏆 " + tr("WIN_RED") + " 🏆"
+			ui_stats_winner_lbl.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+		elif w == 2:
+			ui_stats_winner_lbl.text = "🏆 " + tr("WIN_BLUE") + " 🏆"
+			ui_stats_winner_lbl.add_theme_color_override("font_color", Color(0.35, 0.65, 1.0))
+		else:
+			ui_stats_winner_lbl.text = "🤝 " + tr("MATCH_DRAW") + " 🤝"
+			ui_stats_winner_lbl.add_theme_color_override("font_color", Color(0.95, 0.85, 0.35))
+	
+	if ui_stats_score_lbl:
+		ui_stats_score_lbl.text = "RED  %d : %d  BLUE" % [state_manager.scores[1], state_manager.scores[2]]
+		ui_stats_score_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	
+	if match_stats and not ui_stats_row_labels.is_empty():
+		ui_stats_row_labels["goals"]["red"].text = str(match_stats.goals[1])
+		ui_stats_row_labels["goals"]["blue"].text = str(match_stats.goals[2])
+		ui_stats_row_labels["shots"]["red"].text = str(match_stats.shots[1])
+		ui_stats_row_labels["shots"]["blue"].text = str(match_stats.shots[2])
+		ui_stats_row_labels["posts"]["red"].text = str(match_stats.post_hits[1])
+		ui_stats_row_labels["posts"]["blue"].text = str(match_stats.post_hits[2])
+		ui_stats_row_labels["powerups"]["red"].text = str(match_stats.powerups[1])
+		ui_stats_row_labels["powerups"]["blue"].text = str(match_stats.powerups[2])
+		ui_stats_row_labels["jumps"]["red"].text = str(match_stats.jumps[1])
+		ui_stats_row_labels["jumps"]["blue"].text = str(match_stats.jumps[2])
+		ui_stats_row_labels["tackles"]["red"].text = str(match_stats.tackles[1])
+		ui_stats_row_labels["tackles"]["blue"].text = str(match_stats.tackles[2])
+		var p1 = match_stats.get_possession_percent(1)
+		var p2 = match_stats.get_possession_percent(2)
+		ui_stats_row_labels["possession"]["red"].text = "%0.0f%%" % p1
+		ui_stats_row_labels["possession"]["blue"].text = "%0.0f%%" % p2
+		ui_stats_row_labels["speed"]["red"].text = "-"
+		ui_stats_row_labels["speed"]["blue"].text = "%0.1f km/h" % match_stats.get_max_speed_kmh()
+		
+		for key in ui_stats_row_labels:
+			var info = ui_stats_row_labels[key]
+			info["title"].text = tr(info["tr_key"])
+	
+	if ui_stats_rematch_btn:
+		ui_stats_rematch_btn.text = tr("BTN_REMATCH")
+	if ui_stats_lobby_btn:
+		ui_stats_lobby_btn.text = tr("BTN_LOBBY")
+	if ui_stats_title_lbl:
+		ui_stats_title_lbl.text = tr("STATS_TITLE")
+	
+	ui_stats_container.visible = true
+	ui_stats_container.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(ui_stats_container, "modulate:a", 1.0, 0.3)
+
+func _on_ball_post_hit() -> void:
+	if match_stats and is_instance_valid(ball):
+		match_stats.record_post_hit(ball.last_touched_team)
+
+func _on_player_jumped(p: CagePlayer) -> void:
+	if match_stats and is_instance_valid(p) and p.control_type != CagePlayer.ControlType.OFF:
+		match_stats.record_jump(p.team_id)
+
+func _on_player_tackled(p: CagePlayer) -> void:
+	if match_stats and is_instance_valid(p) and p.control_type != CagePlayer.ControlType.OFF:
+		match_stats.record_tackle(p.team_id)
+
+func _on_player_ball_hit(p: CagePlayer) -> void:
+	if match_stats and is_instance_valid(p) and p.control_type != CagePlayer.ControlType.OFF:
+		match_stats.record_shot(p.team_id)
 
 func _refresh_all_localized_text() -> void:
 	if ui_title_label:
@@ -811,6 +1362,10 @@ func _refresh_all_localized_text() -> void:
 	for i in range(ui_key_hint_labels.size()):
 		ui_key_hint_labels[i].text = hint_fmt % [i + 1, team_keys[i]]
 	_update_lobby_ui()
+	_update_pause_buttons_text()
+	_update_volume_labels()
+	if ui_stats_container and ui_stats_container.visible:
+		show_match_stats()
 
 func _update_lobby_ui() -> void:
 	for i in range(players.size()):
@@ -893,6 +1448,44 @@ func _update_score_label() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		if ui_stats_container and ui_stats_container.visible:
+			if event.keycode == KEY_R:
+				if sound_manager:
+					sound_manager.play_ui_click()
+				ui_stats_container.visible = false
+				restart_game()
+				return
+			elif event.keycode == KEY_L or event.keycode == KEY_ESCAPE:
+				if sound_manager:
+					sound_manager.play_ui_click()
+				ui_stats_container.visible = false
+				return_to_lobby()
+				return
+
+		if is_game_paused:
+			if event.keycode == KEY_ESCAPE:
+				toggle_pause()
+				return
+			elif event.keycode == KEY_R:
+				toggle_pause()
+				restart_game()
+				return
+			elif event.keycode == KEY_L:
+				toggle_pause()
+				return_to_lobby()
+				return
+			elif event.keycode == KEY_T:
+				cycle_arena_theme()
+				_update_pause_buttons_text()
+				return
+			elif event.keycode == KEY_M:
+				toggle_bgm_music()
+				return
+			elif event.keycode == KEY_F11:
+				toggle_fullscreen()
+				_update_pause_buttons_text()
+				return
+
 		if event.keycode == KEY_M:
 			toggle_bgm_music()
 			return
@@ -929,7 +1522,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				start_match_from_lobby()
 		else:
 			if event.keycode == KEY_ESCAPE:
-				return_to_lobby()
+				toggle_pause()
 			elif event.keycode == KEY_B:
 				toggle_p2_bot()
 			elif event.keycode == KEY_P:
@@ -1183,6 +1776,8 @@ func _on_power_up_collected(player: CagePlayer, type: CageConfig.PowerUpType) ->
 	for i in range(active_power_ups.size() - 1, -1, -1):
 		if not is_instance_valid(active_power_ups[i]) or active_power_ups[i].is_queued_for_deletion():
 			active_power_ups.remove_at(i)
+	if match_stats and is_instance_valid(player):
+		match_stats.record_powerup(player.team_id)
 	player.apply_power_up(type)
 	show_powerup_banner(player, type)
 
@@ -1228,6 +1823,14 @@ func start_match_from_lobby() -> void:
 		ui_banner_label.text = tr("MIN_PLAYERS_WARN")
 		return
 	
+	is_game_paused = false
+	if ui_pause_container:
+		ui_pause_container.visible = false
+	if ui_stats_container:
+		ui_stats_container.visible = false
+	if match_stats:
+		match_stats.reset()
+	
 	ui_lobby_panel.visible = false
 	ui_hud_container.visible = true
 	_power_up_spawn_timer = 0.0
@@ -1242,6 +1845,11 @@ func start_match_from_lobby() -> void:
 		spawn_power_up()
 
 func return_to_lobby() -> void:
+	is_game_paused = false
+	if ui_pause_container:
+		ui_pause_container.visible = false
+	if ui_stats_container:
+		ui_stats_container.visible = false
 	clear_power_ups()
 	for p in players:
 		p.freeze = true
@@ -1254,6 +1862,9 @@ func return_to_lobby() -> void:
 	_update_lobby_ui()
 
 func _process(delta: float) -> void:
+	if is_game_paused:
+		return
+		
 	if state_manager:
 		state_manager.update_logic(delta)
 	
@@ -1265,6 +1876,19 @@ func _process(delta: float) -> void:
 			ui_banner_label.text = tr("BANNER_KICKOFF")
 	
 	if state_manager.current_state == CageStateManager.MatchState.PLAYING:
+		if match_stats and is_instance_valid(ball):
+			match_stats.record_speed(ball.linear_velocity.length())
+			var closest_team = 1
+			var min_dist = 9999.0
+			for p in players:
+				if p.control_type != CagePlayer.ControlType.OFF:
+					var d = p.global_position.distance_to(ball.global_position) if (p.is_inside_tree() and ball.is_inside_tree()) else p.position.distance_to(ball.position)
+					if d < min_dist:
+						min_dist = d
+						closest_team = p.team_id
+			if min_dist < 4.5:
+				match_stats.update_possession(delta, closest_team)
+				
 		if CageConfig.powerups_enabled:
 			_power_up_spawn_timer += delta
 			if _power_up_spawn_timer >= CageConfig.POWERUP_SPAWN_INTERVAL:
@@ -1279,6 +1903,13 @@ func _process(delta: float) -> void:
 		restart_game()
 
 func restart_game() -> void:
+	is_game_paused = false
+	if ui_pause_container:
+		ui_pause_container.visible = false
+	if ui_stats_container:
+		ui_stats_container.visible = false
+	if match_stats:
+		match_stats.reset()
 	clear_power_ups()
 	reset_positions()
 	state_manager.reset_match()
@@ -1341,6 +1972,8 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 				ball.freeze = false
 		CageStateManager.MatchState.GOAL_SCORED, CageStateManager.MatchState.CELEBRATION:
 			ui_banner_label.visible = true
+			if match_stats and state_manager.last_scoring_team in [1, 2]:
+				match_stats.record_goal(state_manager.last_scoring_team)
 			if sound_manager:
 				sound_manager.play_goal()
 				sound_manager.duck_bgm(2.5)
@@ -1361,16 +1994,10 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 		CageStateManager.MatchState.RESET:
 			reset_positions()
 		CageStateManager.MatchState.MATCH_OVER:
-			ui_banner_label.visible = true
+			ui_banner_label.visible = false
 			if sound_manager:
-				sound_manager.play_whistle()
-			var w = state_manager.get_winner()
-			if w == 1:
-				ui_banner_label.text = tr("WIN_RED")
-			elif w == 2:
-				ui_banner_label.text = tr("WIN_BLUE")
-			else:
-				ui_banner_label.text = tr("MATCH_DRAW")
+				sound_manager.play_final_whistle()
+			show_match_stats()
 
 func _on_score_updated(_team_id: int, _new_score: int) -> void:
 	_update_score_label()

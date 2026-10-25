@@ -6,6 +6,10 @@ const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CagePowerUp = preload("res://scripts/power_up.gd")
 
+signal jumped(player: CagePlayer)
+signal tackled(player: CagePlayer)
+signal ball_hit(player: CagePlayer)
+
 enum ControlType {
 	OFF,
 	HUMAN_KB1,
@@ -96,6 +100,7 @@ func _ready() -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if body is SoccerBall:
+		ball_hit.emit(self)
 		if has_super_shot:
 			var shoot_dir = (body.global_position - global_position).normalized() if is_inside_tree() else Vector3.RIGHT
 			if shoot_dir.length_squared() < 0.01:
@@ -107,6 +112,7 @@ func _on_body_entered(body: Node) -> void:
 				active_power_up = CageConfig.PowerUpType.NONE
 			_update_aura()
 	elif body is CagePlayer:
+		tackled.emit(self)
 		if freeze_tackle_ready and body.team_id != team_id:
 			body.freeze_player(CageConfig.POWERUP_FREEZE_DURATION)
 			freeze_tackle_ready = false
@@ -423,6 +429,7 @@ func trigger_jump() -> void:
 	# Prüfen, ob der Spieler nahe dem Boden ist
 	var cur_y = global_position.y if is_inside_tree() else position.y
 	if cur_y <= CageConfig.PLAYER_RADIUS + 0.35:
+		jumped.emit(self)
 		apply_central_impulse(Vector3.UP * CageConfig.PLAYER_JUMP_IMPULSE)
 		if CageSoundManager.instance:
 			CageSoundManager.instance.play_jump()

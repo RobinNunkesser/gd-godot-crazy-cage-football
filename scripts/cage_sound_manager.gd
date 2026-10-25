@@ -15,12 +15,20 @@ var stream_goal: AudioStreamWAV
 var stream_jump: AudioStreamWAV
 var stream_boost: AudioStreamWAV
 var stream_tackle: AudioStreamWAV
+var stream_final_whistle: AudioStreamWAV
+var stream_fence: AudioStreamWAV
+var stream_powerup: AudioStreamWAV
+var stream_ui_click: AudioStreamWAV
 var stream_menu_bgm: AudioStream
 var stream_match_bgm: AudioStream
 var stream_bgm: AudioStream
 
+var master_volume: float = 1.0
+var bgm_volume: float = 0.8
+var sfx_volume: float = 1.0
+
 var _players: Array[AudioStreamPlayer] = []
-var _pool_size: int = 10
+var _pool_size: int = 12
 var _current_player_idx: int = 0
 var _bgm_player: AudioStreamPlayer
 var bgm_enabled: bool = true
@@ -202,9 +210,84 @@ func play_tackle(force: float) -> void:
 	if not p:
 		return
 	p.stream = stream_tackle
-	p.volume_db = clampf(-16.0 + force * 1.2, -18.0, 1.0)
+	p.volume_db = _calc_sfx_volume(clampf(-16.0 + force * 1.2, -18.0, 1.0))
 	p.pitch_scale = randf_range(0.92, 1.08)
 	p.play()
+
+## 9. Schiedsrichter-Schlusspfiff (Dreifacher Abpfiff: kurz - kurz - laaaang)
+func play_final_whistle() -> void:
+	if not is_inside_tree():
+		return
+	var p = _get_available_player()
+	if not p:
+		return
+	p.stream = stream_final_whistle
+	p.volume_db = _calc_sfx_volume(0.0)
+	p.pitch_scale = 1.0
+	p.play()
+
+## 10. Drahtgitter-Käfigaufprall (metallisches Rasseln)
+func play_fence(force: float = 6.0) -> void:
+	if not is_inside_tree():
+		return
+	var p = _get_available_player()
+	if not p:
+		return
+	p.stream = stream_fence
+	p.volume_db = _calc_sfx_volume(clampf(-18.0 + force * 1.2, -22.0, 1.0))
+	p.pitch_scale = randf_range(0.94, 1.06)
+	p.play()
+
+## 11. Power-Up gesammelt (Arcade Chime)
+func play_powerup() -> void:
+	if not is_inside_tree():
+		return
+	var p = _get_available_player()
+	if not p:
+		return
+	p.stream = stream_powerup
+	p.volume_db = _calc_sfx_volume(0.5)
+	p.pitch_scale = randf_range(0.98, 1.02)
+	p.play()
+
+## 12. UI Klick / Auswahl
+func play_ui_click() -> void:
+	if not is_inside_tree():
+		return
+	var p = _get_available_player()
+	if not p:
+		return
+	p.stream = stream_ui_click
+	p.volume_db = _calc_sfx_volume(-6.0)
+	p.pitch_scale = randf_range(0.98, 1.02)
+	p.play()
+
+## Lautstärkeregelung
+func set_master_volume(vol: float) -> void:
+	master_volume = clampf(vol, 0.0, 1.0)
+	_apply_volumes()
+
+func set_bgm_volume(vol: float) -> void:
+	bgm_volume = clampf(vol, 0.0, 1.0)
+	_apply_volumes()
+
+func set_sfx_volume(vol: float) -> void:
+	sfx_volume = clampf(vol, 0.0, 1.0)
+	_apply_volumes()
+
+func _calc_sfx_volume(base_db: float) -> float:
+	if sfx_volume <= 0.001 or master_volume <= 0.001:
+		return -80.0
+	var linear = sfx_volume * master_volume
+	return base_db + linear_to_db(linear)
+
+func _apply_volumes() -> void:
+	if _bgm_player and _bgm_player.is_inside_tree():
+		if bgm_volume <= 0.001 or master_volume <= 0.001 or not bgm_enabled:
+			_bgm_player.volume_db = -80.0
+		else:
+			var linear = bgm_volume * master_volume
+			_bgm_player.volume_db = BGM_BASE_VOLUME_DB + linear_to_db(linear)
 
 func _synthesize_all_sounds() -> void:
 	stream_kick = _generate_kick_wav()
@@ -215,6 +298,10 @@ func _synthesize_all_sounds() -> void:
 	stream_jump = _generate_jump_wav()
 	stream_boost = _generate_boost_wav()
 	stream_tackle = _generate_tackle_wav()
+	stream_final_whistle = _generate_final_whistle_wav()
+	stream_fence = _generate_fence_wav()
+	stream_powerup = _generate_powerup_wav()
+	stream_ui_click = _generate_ui_click_wav()
 	
 	# Juhani Junkala [Retro Game Music Pack] via OpenGameArt (CC0 1.0 Universal)
 	# 1. Menü-Theme: "Title Screen"
@@ -543,4 +630,108 @@ func _generate_bgm_wav() -> AudioStreamWAV:
 	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	wav.loop_begin = 0
 	wav.loop_end = total_samples
+	return wav
+
+func _generate_final_whistle_wav() -> AudioStreamWAV:
+	var mix_rate = 22050
+	var duration = 1.35
+	var total_samples = int(mix_rate * duration)
+	var data = PackedByteArray()
+	data.resize(total_samples * 2)
+	
+	for i in range(total_samples):
+		var t = float(i) / float(mix_rate)
+		# 3 Beeps: 0.0-0.22, 0.34-0.56, 0.68-1.32
+		var active = false
+		var progress = 0.0
+		if t < 0.22:
+			active = true
+			progress = t / 0.22
+		elif t >= 0.34 and t < 0.56:
+			active = true
+			progress = (t - 0.34) / 0.22
+		elif t >= 0.68 and t < 1.32:
+			active = true
+			progress = (t - 0.68) / 0.64
+			
+		if active:
+			var trill = sin(t * 36.0 * TAU) * 120.0
+			var f1 = 2900.0 + trill
+			var f2 = 3200.0 + trill
+			var env = sin(progress * PI)
+			var tone = (sin(t * f1 * TAU) * 0.5 + sin(t * f2 * TAU) * 0.5) * env * 20000.0
+			data.encode_s16(i * 2, int(tone))
+		else:
+			data.encode_s16(i * 2, 0)
+			
+	var wav = AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = mix_rate
+	wav.data = data
+	return wav
+
+func _generate_fence_wav() -> AudioStreamWAV:
+	var mix_rate = 22050
+	var duration = 0.30
+	var total_samples = int(mix_rate * duration)
+	var data = PackedByteArray()
+	data.resize(total_samples * 2)
+	
+	for i in range(total_samples):
+		var t = float(i) / float(mix_rate)
+		var progress = t / duration
+		var env = exp(-progress * 9.0)
+		var buzz = randf_range(-1.0, 1.0) * exp(-progress * 15.0) * 0.4
+		var metal = sin(t * 1480.0 * TAU) * 0.35 + sin(t * 2240.0 * TAU) * 0.25
+		var s = (buzz + metal) * env * 22000.0
+		data.encode_s16(i * 2, int(s))
+		
+	var wav = AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = mix_rate
+	wav.data = data
+	return wav
+
+func _generate_powerup_wav() -> AudioStreamWAV:
+	var mix_rate = 22050
+	var duration = 0.36
+	var total_samples = int(mix_rate * duration)
+	var data = PackedByteArray()
+	data.resize(total_samples * 2)
+	
+	var freqs = [523.25, 659.25, 783.99, 1046.50]
+	var seg = duration / 4.0
+	
+	for i in range(total_samples):
+		var t = float(i) / float(mix_rate)
+		var idx = mini(int(t / seg), 3)
+		var t_seg = fmod(t, seg)
+		var env = sin((t_seg / seg) * PI)
+		var s = (sin(t * freqs[idx] * TAU) * 0.7 + sin(t * freqs[idx] * 2.0 * TAU) * 0.3) * env * 21000.0
+		data.encode_s16(i * 2, int(s))
+		
+	var wav = AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = mix_rate
+	wav.data = data
+	return wav
+
+func _generate_ui_click_wav() -> AudioStreamWAV:
+	var mix_rate = 22050
+	var duration = 0.05
+	var total_samples = int(mix_rate * duration)
+	var data = PackedByteArray()
+	data.resize(total_samples * 2)
+	
+	for i in range(total_samples):
+		var t = float(i) / float(mix_rate)
+		var progress = t / duration
+		var env = exp(-progress * 24.0)
+		var s = sin(t * 1850.0 * TAU) * env * 20000.0
+		data.encode_s16(i * 2, int(s))
+		
+	var wav = AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = mix_rate
+	wav.data = data
 	return wav

@@ -5,6 +5,9 @@ const CageConfig = preload("res://scripts/config.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 
+signal post_hit()
+
+var last_touched_team: int = 1
 var _mesh_instance: MeshInstance3D
 var _ball_light: OmniLight3D = null
 var _pending_teleport: bool = false
@@ -62,6 +65,7 @@ func _on_body_entered(body: Node) -> void:
 		trigger_squash(speed)
 	
 	if body is CagePlayer:
+		last_touched_team = body.team_id
 		if CageSoundManager.instance:
 			CageSoundManager.instance.play_kick(speed)
 		if CageJuiceManager.instance:
@@ -69,6 +73,7 @@ func _on_body_entered(body: Node) -> void:
 			if speed > 6.0:
 				CageJuiceManager.instance.trigger_shake(0.2)
 	elif body.name.begins_with("GoalPost") or body.name.begins_with("GoalCrossbar"):
+		post_hit.emit()
 		if CageSoundManager.instance:
 			CageSoundManager.instance.play_post()
 		if CageJuiceManager.instance:
@@ -79,7 +84,10 @@ func _on_body_entered(body: Node) -> void:
 			CageJuiceManager.instance.spawn_turf_puff(pos, speed * 0.5)
 	else:
 		if CageSoundManager.instance:
-			CageSoundManager.instance.play_wall(speed)
+			if pos.y > 1.2:
+				CageSoundManager.instance.play_fence(speed)
+			else:
+				CageSoundManager.instance.play_wall(speed)
 		if CageJuiceManager.instance and speed > 4.0:
 			CageJuiceManager.instance.spawn_sparks(pos, speed)
 			CageJuiceManager.instance.trigger_shake(clampf(speed * 0.03, 0.1, 0.35))

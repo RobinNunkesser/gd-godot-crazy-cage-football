@@ -199,7 +199,7 @@ func _on_body_entered(body: Node) -> void:
 			CageJuiceManager.instance.spawn_sparks(pos, 10.0)
 			CageJuiceManager.instance.trigger_shake(0.2)
 		if CageSoundManager.instance:
-			CageSoundManager.instance.play_boost()
+			CageSoundManager.instance.play_powerup()
 		
 		# Sanftes Aufblitzen und Verschwinden
 		if is_inside_tree():

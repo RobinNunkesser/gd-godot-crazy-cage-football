@@ -9,6 +9,7 @@ const MainCageFootball = preload("res://scenes/main.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CageThemeManager = preload("res://scripts/cage_theme_manager.gd")
+const CageMatchStats = preload("res://scripts/match_stats.gd")
 
 func _init() -> void:
 	print("\n--- Running Headless Godot 4 Unit & Gameplay Tests for Crazy Cage Football ---")
@@ -24,6 +25,8 @@ func _init() -> void:
 	success = success and _test_main_scene()
 	success = success and _test_power_ups()
 	success = success and _test_theme_manager()
+	success = success and _test_match_stats()
+	success = success and _test_pause_and_options()
 	
 	if success:
 		print("=== ALL TESTS FOR CRAZY CAGE FOOTBALL PASSED SUCCESSFULLY! ===\n")
@@ -438,5 +441,116 @@ func _test_theme_manager() -> bool:
 	
 	main_scene.queue_free()
 	print("  -> CageThemeManager, all 3 starter themes & live switching OK.")
+	return true
+
+func _test_match_stats() -> bool:
+	print("[11/12] Testing CageMatchStats data aggregation, possession & top speed...")
+	var stats = CageMatchStats.new()
+	assert(stats.goals[1] == 0 and stats.goals[2] == 0, "Initial goals must be 0")
+	
+	# Track events
+	stats.record_goal(1)
+	stats.record_goal(1)
+	stats.record_goal(2)
+	assert(stats.goals[1] == 2 and stats.goals[2] == 1, "Goals should be 2 for Team 1 and 1 for Team 2")
+	
+	stats.record_shot(1)
+	stats.record_shot(2)
+	stats.record_shot(2)
+	assert(stats.shots[1] == 1 and stats.shots[2] == 2, "Shots should be recorded accurately")
+	
+	stats.record_post_hit(1)
+	assert(stats.post_hits[1] == 1 and stats.post_hits[2] == 0, "Post hits should be recorded")
+	
+	stats.record_powerup(2)
+	assert(stats.powerups[2] == 1, "Powerup collection should be recorded")
+	
+	stats.record_jump(1)
+	stats.record_jump(1)
+	assert(stats.jumps[1] == 2, "Jumps should be recorded")
+	
+	stats.record_tackle(2)
+	assert(stats.tackles[2] == 1, "Tackles should be recorded")
+	
+	# Speed
+	stats.record_speed(10.0)
+	stats.record_speed(5.0)
+	stats.record_speed(25.0)
+	assert(is_equal_approx(stats.get_max_speed_kmh(), 90.0), "25 m/s should equal 90.0 km/h")
+	
+	# Possession
+	stats.update_possession(60.0, 1)
+	stats.update_possession(40.0, 2)
+	assert(is_equal_approx(stats.get_possession_percent(1), 60.0), "Team 1 possession should be 60%")
+	assert(is_equal_approx(stats.get_possession_percent(2), 40.0), "Team 2 possession should be 40%")
+	
+	stats.reset()
+	assert(stats.goals[1] == 0 and stats.goals[2] == 0, "Goals reset to 0")
+	assert(stats.max_ball_speed_ms == 0.0, "Speed reset to 0")
+	assert(stats.possession_seconds[1] == 0.0, "Possession reset to 0")
+	
+	print("  -> CageMatchStats calculations & reset verified successfully.")
+	return true
+
+func _test_pause_and_options() -> bool:
+	print("[12/12] Testing Pause- & Options-Menu, Match End Stats Modal & Audio Volume Controls...")
+	var main_scene = MainCageFootball.new()
+	root.add_child(main_scene)
+	main_scene._ready()
+	
+	assert(main_scene.match_stats != null, "Match stats instance should be initialized in MainCageFootball")
+	assert(main_scene.ui_pause_container != null, "Pause container UI should exist")
+	assert(main_scene.ui_stats_container != null, "Stats container UI should exist")
+	assert(main_scene.ui_pause_container.visible == false, "Pause menu should initially be hidden")
+	assert(main_scene.ui_stats_container.visible == false, "Stats menu should initially be hidden")
+	
+	# 1. Start match and test Pause
+	main_scene.start_match_from_lobby()
+	assert(main_scene.state_manager.current_state != CageStateManager.MatchState.LOBBY, "Match should have started")
+	
+	main_scene.toggle_pause()
+	assert(main_scene.is_game_paused == true, "Game should be paused")
+	assert(main_scene.ui_pause_container.visible == true, "Pause menu should be visible")
+	
+	# 2. Test Volume Sliders in Pause Menu
+	assert(main_scene.ui_master_slider != null, "Master slider should exist")
+	assert(main_scene.ui_bgm_slider != null, "BGM slider should exist")
+	assert(main_scene.ui_sfx_slider != null, "SFX slider should exist")
+	
+	main_scene.ui_master_slider.value_changed.emit(0.5)
+	assert(main_scene.sound_manager.master_volume == 0.5, "Master volume should be set to 0.5")
+	main_scene.ui_bgm_slider.value_changed.emit(0.3)
+	assert(main_scene.sound_manager.bgm_volume == 0.3, "BGM volume should be set to 0.3")
+	main_scene.ui_sfx_slider.value_changed.emit(0.8)
+	assert(main_scene.sound_manager.sfx_volume == 0.8, "SFX volume should be set to 0.8")
+	
+	# Unpause
+	main_scene.toggle_pause()
+	assert(main_scene.is_game_paused == false, "Game should be unpaused")
+	assert(main_scene.ui_pause_container.visible == false, "Pause menu should be hidden")
+	
+	# 3. Test Match End Stats Modal
+	main_scene.match_stats.record_goal(1)
+	main_scene.match_stats.record_shot(1)
+	main_scene.match_stats.record_post_hit(2)
+	main_scene.match_stats.record_jump(1)
+	main_scene.match_stats.record_speed(18.0)
+	main_scene.show_match_stats()
+	
+	assert(main_scene.ui_stats_container.visible == true, "Stats modal should be visible")
+	assert(main_scene.ui_stats_row_labels.has("goals"), "Goals row label should exist")
+	assert(main_scene.ui_stats_row_labels.has("shots"), "Shots row label should exist")
+	assert(main_scene.ui_stats_row_labels.has("posts"), "Posts row label should exist")
+	assert(main_scene.ui_stats_row_labels.has("speed"), "Speed row label should exist")
+	assert(main_scene.ui_stats_row_labels["goals"]["red"].text == "1", "Red goals should display 1")
+	
+	# 4. Return to lobby from stats
+	main_scene.return_to_lobby()
+	assert(main_scene.ui_stats_container.visible == false, "Stats modal should be hidden in lobby")
+	assert(main_scene.ui_pause_container.visible == false, "Pause modal should be hidden in lobby")
+	assert(main_scene.ui_lobby_panel.visible == true, "Lobby should be visible")
+	
+	main_scene.queue_free()
+	print("  -> Pause/Options, Match Stats Modal & Volume Controls OK.")
 	return true
 

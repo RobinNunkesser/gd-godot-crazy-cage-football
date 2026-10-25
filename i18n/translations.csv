@@ -48,3 +48,26 @@ THEME_SUNNY,Sonnendach (Sommer),Sunny Rooftop (Summer)
 THEME_CYBER,Cyber Neon (Synthwave),Cyber Neon (Synthwave)
 THEME_STATUS_BANNER,ARENA: %s,ARENA: %s
 LOBBY_THEME_BTN,"🏟️ [T] ARENA: %s","🏟️ [T] ARENA: %s"
+PAUSE_TITLE,SPIEL PAUSIERT,GAME PAUSED
+PAUSE_RESUME,[ESC] Weiterspielen,[ESC] Resume
+PAUSE_RESTART,[R] Match Neustarten,[R] Restart Match
+PAUSE_LOBBY,[L] Zurück zur Lobby,[L] Exit to Lobby
+OPTIONS_TITLE,EINSTELLUNGEN & AUDIO,SETTINGS & AUDIO
+VOL_MASTER,Master-Lautstärke,Master Volume
+VOL_BGM,Musik (BGM),Music (BGM)
+VOL_SFX,Soundeffekte (SFX),Sound Effects (SFX)
+STATS_TITLE,MATCH-STATISTIKEN & AUSWERTUNG,MATCH STATISTICS & SUMMARY
+STATS_GOALS,Tore,Goals
+STATS_SHOTS,Torschüsse,Shots on Target
+STATS_POST_HITS,Pfostentreffer,Post Hits
+STATS_POWERUPS,Power-Ups genutzt,Power-Ups Used
+STATS_JUMPS,Zıplama-Sprünge,Zıplama Jumps
+STATS_TOP_SPEED,Top-Ballgeschwindigkeit,Top Ball Speed
+STATS_POSSESSION,Ballbesitz,Possession
+BTN_REMATCH,[R] Nochmal spielen,[R] Rematch
+BTN_LOBBY,[L] Lobby,[L] Lobby
+STATS_TACKLES,Tackles & Checks,Tackles & Checks
+CONTROLS_TITLE,STEUERUNGS-REFERENZ,CONTROLS REFERENCE
+CONTROLS_P1,"P1: WASD + Space (Sprung) + Shift (Boost)","P1: WASD + Space (Jump) + Shift (Boost)"
+CONTROLS_P2,"P2: Pfeile + Enter (Sprung) + Strg (Boost)","P2: Arrows + Enter (Jump) + Ctrl (Boost)"
+CONTROLS_GAMEPAD,"Gamepad: Analogstick + A/Kreuz + X/Viereck","Gamepad: Analog Stick + A/Cross + X/Square"
