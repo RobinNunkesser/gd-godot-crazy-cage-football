@@ -4,6 +4,7 @@ extends RigidBody3D
 const CageConfig = preload("res://scripts/config.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
+const CagePowerUp = preload("res://scripts/power_up.gd")
 
 enum ControlType {
 	OFF,
@@ -39,6 +40,7 @@ var freeze_tackle_ready: bool = false
 var has_super_shot: bool = false
 var is_frozen: bool = false
 var freeze_timer: float = 0.0
+var stumble_timer: float = 0.0
 
 var _eyes_pivot: Node3D
 var _mesh_instance: MeshInstance3D
@@ -173,6 +175,13 @@ func _physics_process(delta: float) -> void:
 		freeze_timer -= delta
 		if freeze_timer <= 0.0:
 			unfreeze_player()
+		_clamp_speed()
+		_update_eyes()
+		return
+
+	# Stumble-Zustand nach Cage-Shaker: Torkeln & Schleudern
+	if stumble_timer > 0.0:
+		stumble_timer -= delta
 		_clamp_speed()
 		_update_eyes()
 		return
@@ -411,6 +420,7 @@ func apply_power_up(type: CageConfig.PowerUpType) -> void:
 		CageConfig.PowerUpType.CAGE_SHAKER:
 			trigger_cage_shaker()
 	_update_aura()
+	spawn_floating_pickup_text(CagePowerUp.get_short_title(type), CagePowerUp.get_type_color(type))
 
 func trigger_cage_shaker() -> void:
 	active_power_up = CageConfig.PowerUpType.NONE
@@ -426,24 +436,82 @@ func trigger_cage_shaker() -> void:
 			if child is CagePlayer:
 				all_players.append(child)
 	
+	# 1. Gegnerische Spieler mit brachialer Wucht an die Banden katapultieren & stumblen
 	for opp in all_players:
 		if opp is CagePlayer and opp != self and opp.team_id != team_id:
 			var opp_pos = opp.global_position if opp.is_inside_tree() else opp.position
 			var push_dir = (opp_pos - my_pos).normalized()
 			if push_dir.length_squared() < 0.01:
-				push_dir = Vector3(1.0, 0.35, 0.0)
+				push_dir = Vector3(1.0, 0.45, 0.0)
 			else:
-				push_dir.y = 0.35
+				push_dir.y = 0.45
 				push_dir = push_dir.normalized()
-			opp.apply_central_impulse(push_dir * 28.0)
+			opp.stumble_timer = 1.2
+			opp.apply_central_impulse(push_dir * 38.0 + Vector3.UP * 10.0)
+			opp.apply_torque_impulse(Vector3(randf_range(-15, 15), randf_range(10, 20), randf_range(-15, 15)))
 			if CageJuiceManager.instance:
-				CageJuiceManager.instance.spawn_sparks(opp_pos, 16.0)
+				CageJuiceManager.instance.spawn_sparks(opp_pos, 22.0)
+				CageJuiceManager.instance.spawn_turf_puff(opp_pos, 8.0)
 	
+	# 2. Den Ball mit Stoßwelle nach vorne peitschen
+	if is_instance_valid(target_ball):
+		var goal_x = CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else -CageConfig.CAGE_WIDTH_X * 0.5
+		var ball_pos = target_ball.global_position if (is_inside_tree() and target_ball.is_inside_tree()) else target_ball.position
+		var to_goal = Vector3(goal_x - ball_pos.x, 0.45, -ball_pos.z * 0.4).normalized()
+		target_ball.apply_central_impulse(to_goal * 18.0)
+	
+	# 3. Visuelle Schockwelle als expandierender Ring
+	_spawn_shockwave_ring(my_pos)
+	
+	# 4. Intensiver Audio- & Camera-Juice
 	if CageJuiceManager.instance:
-		CageJuiceManager.instance.trigger_shake(0.6)
-		CageJuiceManager.instance.spawn_sparks(my_pos, 25.0)
+		CageJuiceManager.instance.trigger_shake(0.85)
+		CageJuiceManager.instance.spawn_sparks(my_pos, 35.0)
 	if CageSoundManager.instance:
-		CageSoundManager.instance.play_wall(25.0)
+		CageSoundManager.instance.play_wall(35.0)
+
+func _spawn_shockwave_ring(center: Vector3) -> void:
+	if not is_inside_tree():
+		return
+	var ring = MeshInstance3D.new()
+	var torus = TorusMesh.new()
+	torus.inner_radius = 0.4
+	torus.outer_radius = 0.8
+	ring.mesh = torus
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = Color(0.2, 1.0, 0.35, 0.9)
+	mat.emission_enabled = true
+	mat.emission = Color(0.2, 1.0, 0.35)
+	mat.emission_energy_multiplier = 4.0
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring.material_override = mat
+	ring.position = Vector3(center.x, 0.15, center.z)
+	get_parent().add_child(ring)
+	
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(ring, "scale", Vector3(16.0, 1.0, 16.0), 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(mat, "albedo_color:a", 0.0, 0.55)
+	tween.chain().tween_callback(ring.queue_free)
+
+func spawn_floating_pickup_text(msg: String, col: Color) -> void:
+	if not is_inside_tree():
+		return
+	var lbl = Label3D.new()
+	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	lbl.text = msg
+	lbl.font_size = 32
+	lbl.outline_size = 8
+	lbl.outline_modulate = Color(0.04, 0.04, 0.08, 0.95)
+	lbl.modulate = col
+	lbl.position = Vector3(0, 1.15, 0)
+	add_child(lbl)
+	
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(lbl, "position:y", 2.3, 1.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(lbl, "modulate:a", 0.0, 1.3).set_delay(0.3)
+	tween.chain().tween_callback(lbl.queue_free)
 
 func freeze_player(duration: float = CageConfig.POWERUP_FREEZE_DURATION) -> void:
 	is_frozen = true
@@ -541,6 +609,7 @@ func reset_to(pos: Vector3) -> void:
 	active_power_up = CageConfig.PowerUpType.NONE
 	speed_boost_timer = 0.0
 	magnet_timer = 0.0
+	stumble_timer = 0.0
 	freeze_tackle_ready = false
 	has_super_shot = false
 	unfreeze_player()

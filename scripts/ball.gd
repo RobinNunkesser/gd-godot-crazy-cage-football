@@ -11,19 +11,22 @@ var _teleport_target: Vector3 = Vector3.ZERO
 var is_super_shot: bool = false
 var _super_shot_timer: float = 0.0
 
-func trigger_super_shot(dir: Vector3, force_multiplier: float = CageConfig.POWERUP_SUPER_SHOT_MULT) -> void:
+func trigger_super_shot(dir: Vector3, _force_multiplier: float = CageConfig.POWERUP_SUPER_SHOT_MULT) -> void:
 	is_super_shot = true
 	_super_shot_timer = 2.5
 	var shoot_dir = dir.normalized()
-	apply_central_impulse(shoot_dir * (linear_velocity.length() * force_multiplier + 14.0))
+	shoot_dir.y = clampf(shoot_dir.y, 0.12, 0.45)
+	shoot_dir = shoot_dir.normalized()
+	linear_velocity = shoot_dir * 24.0 # Starker aber physikalisch sicherer Impuls gegen Tunneling
 	var pos = global_position if is_inside_tree() else position
 	if CageJuiceManager.instance:
-		CageJuiceManager.instance.spawn_sparks(pos, 22.0)
-		CageJuiceManager.instance.trigger_shake(0.45)
+		CageJuiceManager.instance.spawn_sparks(pos, 25.0)
+		CageJuiceManager.instance.trigger_shake(0.55)
 	if CageSoundManager.instance:
-		CageSoundManager.instance.play_kick(25.0)
+		CageSoundManager.instance.play_kick(28.0)
 
 func _ready() -> void:
+	continuous_cd = true # Verhindert Physics-Tunneling durch Banden bei hohen Geschwindigkeiten
 	mass = CageConfig.BALL_MASS
 	linear_damp = CageConfig.BALL_LINEAR_DAMP
 	angular_damp = CageConfig.BALL_ANGULAR_DAMP
@@ -102,8 +105,15 @@ func _physics_process(delta: float) -> void:
 		if _super_shot_timer <= 0.0:
 			is_super_shot = false
 			
+	# Maximale Ballgeschwindigkeit dämpfen um Durchtunneln zu verhindern
+	if linear_velocity.length() > 25.0:
+		linear_velocity = linear_velocity.normalized() * 25.0
+			
 	var cur_pos = global_position if is_inside_tree() else position
-	if cur_pos.y < -0.8 or absf(cur_pos.x) > (CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH + 1.5) or absf(cur_pos.z) > (CageConfig.CAGE_DEPTH_Z * 0.5 + 1.5):
+	# Großzügige Bounds, damit Schüsse ins Tornetz niemals fälschlicherweise zum Anstoßpunkt resetten
+	var max_x = CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH + 4.0
+	var max_z = CageConfig.CAGE_DEPTH_Z * 0.5 + 4.0
+	if cur_pos.y < -1.5 or absf(cur_pos.x) > max_x or absf(cur_pos.z) > max_z:
 		reset_to_center()
 
 func _setup_visuals() -> void:

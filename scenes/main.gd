@@ -42,6 +42,9 @@ var ui_score_label: Label
 var ui_timer_label: Label
 var ui_banner_label: Label
 var ui_hud_container: Control
+var ui_powerup_banner: Panel
+var ui_powerup_title: Label
+var ui_powerup_desc: Label
 
 const SLOT_CONTROL_OPTIONS = [
 	CagePlayer.ControlType.HUMAN_KB1,
@@ -214,8 +217,21 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 	
 	var col = CollisionShape3D.new()
 	var shape = BoxShape3D.new()
-	shape.size = size
+	# Kollisionsbox nach außen hin auf 2.2m verstärken gegen Tunneling bei Super-Shots
+	var col_size = size
+	var col_offset = Vector3.ZERO
+	if size.z < 1.0:
+		col_size.z = 2.2
+		col_offset.z = signf(pos.z) * (col_size.z - size.z) * 0.5
+	if size.x < 1.0:
+		col_size.x = 2.2
+		col_offset.x = signf(pos.x) * (col_size.x - size.x) * 0.5
+	if size.y < 1.0:
+		col_size.y = 2.2
+		col_offset.y = (col_size.y - size.y) * 0.5 # Decke nach oben verstärken
+	shape.size = col_size
 	col.shape = shape
+	col.position = col_offset
 	body.add_child(col)
 	
 	var is_ground_wall = (pos.y - size.y * 0.5 < 0.05) and (size.y > 1.0)
@@ -489,6 +505,42 @@ func _build_ui() -> void:
 	ui_banner_label.add_theme_font_size_override("font_size", 44)
 	ui_hud_container.add_child(ui_banner_label)
 	
+	# Power-Up Notification Banner (Stylishes Popup unterhalb des Timers)
+	ui_powerup_banner = Panel.new()
+	ui_powerup_banner.position = Vector2(340, 115)
+	ui_powerup_banner.size = Vector2(600, 68)
+	ui_powerup_banner.visible = false
+	
+	var pub_style = StyleBoxFlat.new()
+	pub_style.bg_color = Color(0.06, 0.10, 0.16, 0.94)
+	pub_style.border_width_left = 3
+	pub_style.border_width_top = 3
+	pub_style.border_width_right = 3
+	pub_style.border_width_bottom = 3
+	pub_style.border_color = Color(1.0, 0.85, 0.2)
+	pub_style.corner_radius_top_left = 8
+	pub_style.corner_radius_top_right = 8
+	pub_style.corner_radius_bottom_left = 8
+	pub_style.corner_radius_bottom_right = 8
+	ui_powerup_banner.add_theme_stylebox_override("panel", pub_style)
+	
+	ui_powerup_title = Label.new()
+	ui_powerup_title.position = Vector2(10, 6)
+	ui_powerup_title.size = Vector2(580, 30)
+	ui_powerup_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_powerup_title.add_theme_font_size_override("font_size", 20)
+	ui_powerup_banner.add_child(ui_powerup_title)
+	
+	ui_powerup_desc = Label.new()
+	ui_powerup_desc.position = Vector2(10, 36)
+	ui_powerup_desc.size = Vector2(580, 24)
+	ui_powerup_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_powerup_desc.add_theme_font_size_override("font_size", 14)
+	ui_powerup_desc.add_theme_color_override("font_color", Color(0.85, 0.90, 0.98))
+	ui_powerup_banner.add_child(ui_powerup_desc)
+	
+	ui_hud_container.add_child(ui_powerup_banner)
+	
 	var ui_hint = Label.new()
 	ui_hint.text = "[R]: Neustart  |  [ESC]: Zurück zur Lobby  |  [B]: P2 Bot Toggle"
 	ui_hint.position = Vector2(40, 670)
@@ -727,8 +779,35 @@ func _on_power_up_collected(player: CagePlayer, type: CageConfig.PowerUpType) ->
 		if not is_instance_valid(active_power_ups[i]) or active_power_ups[i].is_queued_for_deletion():
 			active_power_ups.remove_at(i)
 	player.apply_power_up(type)
-	if ui_banner_label:
-		ui_banner_label.text = "⚡ SPIELER %d: %s ⚡" % [player.player_id, CagePowerUp.get_type_name(type)]
+	show_powerup_banner(player, type)
+
+func show_powerup_banner(player: CagePlayer, type: CageConfig.PowerUpType) -> void:
+	if not ui_powerup_banner or not is_inside_tree():
+		return
+	var col = CagePowerUp.get_type_color(type)
+	if ui_powerup_title:
+		ui_powerup_title.text = "⚡ SPIELER %d: %s ⚡" % [player.player_id, CagePowerUp.get_short_title(type)]
+		ui_powerup_title.add_theme_color_override("font_color", col)
+	if ui_powerup_desc:
+		ui_powerup_desc.text = CagePowerUp.get_explanation(type)
+	
+	var sb = ui_powerup_banner.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb:
+		sb.border_color = col
+	
+	ui_powerup_banner.visible = true
+	ui_powerup_banner.modulate.a = 1.0
+	ui_powerup_banner.pivot_offset = ui_powerup_banner.size * 0.5
+	ui_powerup_banner.scale = Vector2(1.15, 1.15)
+	
+	var tween = create_tween()
+	tween.tween_property(ui_powerup_banner, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(2.2)
+	tween.tween_property(ui_powerup_banner, "modulate:a", 0.0, 0.35)
+	tween.chain().tween_callback(func():
+		if is_instance_valid(ui_powerup_banner):
+			ui_powerup_banner.visible = false
+	)
 
 func start_match_from_lobby() -> void:
 	var team1_count = 0
