@@ -246,7 +246,44 @@ func _handle_bot_ai(delta: float) -> void:
 			trigger_jump()
 		return
 	
-	# 3. Flanken- und Ecken-Taktik (Corner Clearance)
+	# 3. Taktische Power-Up-Wahrnehmung (Opportunistic Pickup Hunting)
+	# Wenn der Bot noch keinen aktiven Buff hat und der Ball nicht akut das eigene Tor bedroht:
+	var owns_buff = (has_super_shot or speed_boost_timer > 1.0 or magnet_timer > 1.0 or freeze_tackle_ready)
+	var own_goal_x = -CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else CageConfig.CAGE_WIDTH_X * 0.5
+	var ball_threatening_own_goal = (absf(ball_pos.x - own_goal_x) < 5.5 and absf(ball_pos.z) < 3.5)
+	
+	var target_pickup: CagePowerUp = null
+	if not owns_buff and not ball_threatening_own_goal and is_inside_tree():
+		var power_ups = get_tree().get_nodes_in_group("power_ups")
+		var best_score = -999.0
+		for node in power_ups:
+			if node is CagePowerUp and node.is_available():
+				var pup_pos = node.global_position
+				var pup_dist = Vector2(pup_pos.x - my_pos.x, pup_pos.z - my_pos.z).length()
+				if pup_dist < 6.8: # Wahrnehmungs-Radius 6.8 Meter
+					var to_pup = Vector2(pup_pos.x - my_pos.x, pup_pos.z - my_pos.z).normalized()
+					var to_ball = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).normalized()
+					var alignment = to_pup.dot(to_ball)
+					var score = 10.0 - pup_dist + alignment * 2.5
+					# Pickup wählen wenn deutlich näher als Ball oder Ball weit entfernt oder liegt auf dem Weg
+					if pup_dist < dist_to_ball * 0.85 or dist_to_ball > 5.0 or alignment > 0.4:
+						if score > best_score:
+							best_score = score
+							target_pickup = node
+	
+	if is_instance_valid(target_pickup):
+		var pup_pos = target_pickup.global_position
+		var steer_to_pup = Vector2(pup_pos.x - my_pos.x, pup_pos.z - my_pos.z)
+		var pup_dist = steer_to_pup.length()
+		if steer_to_pup.length_squared() > 0.01:
+			var move_dir = Vector3(steer_to_pup.normalized().x, 0.0, steer_to_pup.normalized().y)
+			apply_central_force(move_dir * CageConfig.PLAYER_DRIVE_FORCE * bot_difficulty * 1.1)
+		# Gezielter Dash-Boost, um dem Gegner das Power-Up wegzuschnappen
+		if pup_dist < 2.5 and pup_dist > 0.6 and boost_cooldown <= 0.0:
+			trigger_boost(steer_to_pup.normalized())
+		return
+	
+	# 4. Flanken- und Ecken-Taktik (Corner Clearance)
 	# Ziel-Tor: Team 1 (Rot) greift nach rechts (X > 0) an; Team 2 (Blau) greift nach links (X < 0) an.
 	var goal_x = CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else -CageConfig.CAGE_WIDTH_X * 0.5
 	var to_goal = Vector2(goal_x - ball_pos.x, 0.0).normalized()

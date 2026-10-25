@@ -17,10 +17,14 @@ var _collected: bool = false
 var _label3d: Label3D
 
 func _ready() -> void:
+	add_to_group("power_ups")
 	collision_layer = 1
 	collision_mask = 1
 	body_entered.connect(_on_body_entered)
 	_setup_visuals()
+
+func is_available() -> bool:
+	return not _collected and not is_queued_for_deletion() and is_inside_tree()
 
 static func get_short_title(t: CageConfig.PowerUpType) -> String:
 	match t:

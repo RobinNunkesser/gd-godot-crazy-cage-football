@@ -348,11 +348,21 @@ func _test_power_ups() -> bool:
 	p1.apply_power_up(CageConfig.PowerUpType.CAGE_SHAKER)
 	# Cage-Shaker executes shockwave immediately
 	
-	# 9. Cleanup & Reset
+	# 9. Test Bot AI Power-Up Awareness
+	p2.control_type = CagePlayer.ControlType.AI_BOT
+	p2.target_ball = ball
+	ball.position = Vector3(8.0, 0.4, 0.0)
+	p2.position = Vector3(0.0, 0.4, 0.0)
+	p2.linear_velocity = Vector3.ZERO
+	var test_pup = main_scene.spawn_power_up(CageConfig.PowerUpType.SPEED_BOOTS, Vector3(0.0, 0.55, 2.8))
+	assert(test_pup != null, "Pickup should spawn for bot awareness test")
+	p2._handle_bot_ai(0.016)
+	
+	# 10. Cleanup & Reset
 	main_scene.clear_power_ups()
 	assert(main_scene.active_power_ups.is_empty(), "All powerup tokens should be cleared")
 	
 	main_scene.queue_free()
-	print("  -> All 5 Power-Ups & Toggle verified successfully.")
+	print("  -> All 5 Power-Ups, Bot Awareness & Toggle verified successfully.")
 	return true
 
