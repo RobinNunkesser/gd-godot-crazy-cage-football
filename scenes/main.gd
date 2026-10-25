@@ -143,6 +143,9 @@ func _build_scene() -> void:
 	stadium_light.shadow_enabled = true
 	stadium_light.shadow_opacity = 0.55
 	stadium_light.shadow_blur = 2.0
+	stadium_light.directional_shadow_max_distance = 45.0
+	stadium_light.shadow_bias = 0.05
+	stadium_light.shadow_normal_bias = 1.5
 	add_child(stadium_light)
 	
 	# 4 Eck-Flutlichter an den Käfig-Pfosten (Multi-Winkel-Ausleuchtung gegen Schlagschatten)
@@ -168,10 +171,10 @@ func _build_scene() -> void:
 	floor_inst = MeshInstance3D.new()
 	floor_inst.mesh = floor_box
 	var floor_mat = StandardMaterial3D.new()
-	var turf_path = "res://assets/textures/pitch_turf.jpg"
+	var turf_path = "res://assets/textures/pitch_turf.png"
 	if ResourceLoader.exists(turf_path):
 		floor_mat.albedo_texture = load(turf_path)
-		floor_mat.uv1_scale = Vector3(10.0, 6.0, 1.0)
+		floor_mat.uv1_scale = Vector3(6.0, 4.0, 1.0)
 		floor_mat.roughness = 0.75
 		floor_mat.metallic = 0.05
 	else:
@@ -277,13 +280,14 @@ func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: C
 	var is_ground_wall = (pos.y - size.y * 0.5 < 0.05) and (size.y > 1.0)
 	var board_height = 0.35 if is_ground_wall else 0.0
 	
-	# 1. Solide Prallwand / Kickboard (Bande) - verhindert Z-Fighting mit dem Spielfeldboden vollständig
+	# 1. Solide Prallwand / Kickboard (Bande) - reicht 30cm in den Boden um Z-Fighting an der Kante vollständig zu unterbinden
 	if is_ground_wall:
+		var extra_depth = 0.3
 		var board_inst = MeshInstance3D.new()
 		var board_box = BoxMesh.new()
-		board_box.size = Vector3(size.x, board_height, size.z)
+		board_box.size = Vector3(size.x, board_height + extra_depth, size.z + 0.04)
 		board_inst.mesh = board_box
-		board_inst.position = Vector3(0, -size.y * 0.5 + board_height * 0.5, 0)
+		board_inst.position = Vector3(0, -size.y * 0.5 + (board_height - extra_depth) * 0.5, 0)
 		
 		var board_mat = StandardMaterial3D.new()
 		board_mat.albedo_color = Color(0.18, 0.20, 0.24) # Solide dunkle Industrie-Bande
@@ -510,10 +514,13 @@ func _build_corner_bumpers() -> void:
 		col.shape = shape
 		body.add_child(col)
 		
+		var extra_depth = 0.3
+		var bumper_h = 0.35 + extra_depth
 		var mesh_inst = MeshInstance3D.new()
 		var box = BoxMesh.new()
-		box.size = box_size
+		box.size = Vector3(chamfer_len, bumper_h, CageConfig.WALL_THICKNESS * 1.5)
 		mesh_inst.mesh = box
+		mesh_inst.position = Vector3(0, -CageConfig.CAGE_HEIGHT_Y * 0.5 + (0.35 - extra_depth) * 0.5, 0)
 		var mat = StandardMaterial3D.new()
 		mat.albedo_color = bumper_color
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
@@ -1018,10 +1025,6 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 			var tex = load(tex_path)
 			floor_mat.albedo_texture = tex
 			floor_mat.uv1_scale = t.get("floor_uv_scale", Vector3(10.0, 6.0, 1.0))
-			if bool(t.get("goal_emission_enabled", false)):
-				floor_mat.emission_enabled = true
-				floor_mat.emission_texture = tex
-				floor_mat.emission_energy_multiplier = 0.65
 		else:
 			floor_mat.albedo_color = t.get("floor_color", Color(0.28, 0.32, 0.36))
 		floor_mat.roughness = float(t.get("floor_roughness", 0.75))
