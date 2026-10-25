@@ -11,6 +11,14 @@ const CageConfig = preload("res://scripts/config.gd")
 
 var _current_look_target: Vector3 = Vector3(0.0, 0.6, 0.0)
 
+var trauma: float = 0.0
+var _trauma_decay: float = 1.4
+var _max_shake_offset: Vector3 = Vector3(0.4, 0.25, 0.4)
+var _noise_timer: float = 0.0
+
+func add_trauma(amount: float) -> void:
+	trauma = clampf(trauma + amount, 0.0, 1.0)
+
 func _init() -> void:
 	fov = 82.0
 	near = 0.05
@@ -72,6 +80,19 @@ func update_camera(delta: float) -> void:
 		clampf(action_pos.y * 0.5 + 0.4, 0.4, 2.0),
 		action_pos.z * 0.60
 	)
+	
+	# 5. Screen Shake Trauma
+	if trauma > 0.0:
+		_noise_timer += delta * 32.0
+		var shake = trauma * trauma
+		var offset = Vector3(
+			sin(_noise_timer * 1.3) * _max_shake_offset.x * shake,
+			cos(_noise_timer * 1.7) * _max_shake_offset.y * shake,
+			sin(_noise_timer * 2.1) * _max_shake_offset.z * shake
+		)
+		desired_pos += offset
+		target_look += offset * 0.4
+		trauma = maxf(0.0, trauma - delta * _trauma_decay)
 	
 	if is_inside_tree():
 		global_position = global_position.lerp(desired_pos, delta * CageConfig.CAMERA_LERP_SPEED)

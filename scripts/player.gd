@@ -3,6 +3,7 @@ extends RigidBody3D
 
 const CageConfig = preload("res://scripts/config.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
+const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 
 enum ControlType {
 	OFF,
@@ -57,9 +58,15 @@ func _ready() -> void:
 	_setup_visuals()
 
 func _on_body_entered(body: Node) -> void:
-	if body is CagePlayer and CageSoundManager.instance:
+	if body is CagePlayer:
 		var rel_speed = (linear_velocity - body.linear_velocity).length()
-		CageSoundManager.instance.play_tackle(rel_speed)
+		if CageSoundManager.instance:
+			CageSoundManager.instance.play_tackle(rel_speed)
+		if CageJuiceManager.instance and rel_speed > 3.0:
+			var pos = (global_position + body.global_position) * 0.5 if is_inside_tree() else position
+			CageJuiceManager.instance.spawn_sparks(pos, rel_speed)
+			if rel_speed > 5.0:
+				CageJuiceManager.instance.trigger_shake(0.22)
 
 func _setup_collision() -> void:
 	if not has_node("CollisionShape3D"):
@@ -291,6 +298,14 @@ func trigger_jump() -> void:
 		apply_central_impulse(Vector3.UP * CageConfig.PLAYER_JUMP_IMPULSE)
 		if CageSoundManager.instance:
 			CageSoundManager.instance.play_jump()
+		if CageJuiceManager.instance:
+			var pos = global_position if is_inside_tree() else position
+			CageJuiceManager.instance.spawn_turf_puff(pos - Vector3(0, CageConfig.PLAYER_RADIUS, 0), 1.2)
+		if _mesh_instance and is_inside_tree():
+			var tween = create_tween()
+			tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			_mesh_instance.scale = Vector3(0.85, 1.25, 0.85)
+			tween.tween_property(_mesh_instance, "scale", Vector3.ONE, 0.16)
 
 func trigger_boost(input_vec: Vector2) -> void:
 	boost_cooldown = CageConfig.PLAYER_BOOST_COOLDOWN
@@ -303,6 +318,10 @@ func trigger_boost(input_vec: Vector2) -> void:
 	apply_central_impulse(boost_dir * CageConfig.PLAYER_BOOST_IMPULSE)
 	if CageSoundManager.instance:
 		CageSoundManager.instance.play_boost()
+	if CageJuiceManager.instance:
+		var pos = global_position if is_inside_tree() else position
+		CageJuiceManager.instance.spawn_dash_dust(pos, boost_dir)
+		CageJuiceManager.instance.trigger_shake(0.18)
 
 func _clamp_speed() -> void:
 	var horiz_vel = Vector3(linear_velocity.x, 0.0, linear_velocity.z)

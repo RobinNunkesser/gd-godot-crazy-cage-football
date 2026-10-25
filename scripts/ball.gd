@@ -3,6 +3,7 @@ extends RigidBody3D
 
 const CageConfig = preload("res://scripts/config.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
+const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 
 var _mesh_instance: MeshInstance3D
 var _pending_teleport: bool = false
@@ -26,16 +27,44 @@ func _ready() -> void:
 	_setup_collision()
 	_setup_visuals()
 
-func _on_body_entered(body: Node) -> void:
-	if not CageSoundManager.instance:
+func trigger_squash(force: float) -> void:
+	if not _mesh_instance or not is_inside_tree():
 		return
+	var factor = clampf(force * 0.025, 0.08, 0.28)
+	var tween = create_tween()
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_mesh_instance.scale = Vector3(1.0 + factor, 1.0 - factor, 1.0 + factor)
+	tween.tween_property(_mesh_instance, "scale", Vector3.ONE, 0.12)
+
+func _on_body_entered(body: Node) -> void:
 	var speed = linear_velocity.length()
+	var pos = global_position if is_inside_tree() else position
+	
+	if speed > 2.0:
+		trigger_squash(speed)
+	
 	if body is CagePlayer:
-		CageSoundManager.instance.play_kick(speed)
+		if CageSoundManager.instance:
+			CageSoundManager.instance.play_kick(speed)
+		if CageJuiceManager.instance:
+			CageJuiceManager.instance.spawn_turf_puff(pos, speed)
+			if speed > 6.0:
+				CageJuiceManager.instance.trigger_shake(0.2)
 	elif body.name.begins_with("GoalPost") or body.name.begins_with("GoalCrossbar"):
-		CageSoundManager.instance.play_post()
-	elif body.name != "CageFloor":
-		CageSoundManager.instance.play_wall(speed)
+		if CageSoundManager.instance:
+			CageSoundManager.instance.play_post()
+		if CageJuiceManager.instance:
+			CageJuiceManager.instance.spawn_sparks(pos, speed * 1.5)
+			CageJuiceManager.instance.trigger_shake(0.45)
+	elif body.name == "CageFloor":
+		if speed > 3.0 and CageJuiceManager.instance:
+			CageJuiceManager.instance.spawn_turf_puff(pos, speed * 0.5)
+	else:
+		if CageSoundManager.instance:
+			CageSoundManager.instance.play_wall(speed)
+		if CageJuiceManager.instance and speed > 4.0:
+			CageJuiceManager.instance.spawn_sparks(pos, speed)
+			CageJuiceManager.instance.trigger_shake(clampf(speed * 0.03, 0.1, 0.35))
 
 func _setup_collision() -> void:
 	if not has_node("CollisionShape3D"):

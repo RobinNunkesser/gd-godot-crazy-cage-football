@@ -7,6 +7,7 @@ const SoccerBall = preload("res://scripts/ball.gd")
 const CageCamera = preload("res://scripts/cage_camera.gd")
 const MainCageFootball = preload("res://scenes/main.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
+const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 
 func _init() -> void:
 	print("\n--- Running Headless Godot 4 Unit & Gameplay Tests for Crazy Cage Football ---")
@@ -14,6 +15,7 @@ func _init() -> void:
 	
 	success = success and _test_config()
 	success = success and _test_sound_manager()
+	success = success and _test_juice_manager()
 	success = success and _test_state_manager()
 	success = success and _test_player_jump()
 	success = success and _test_ball_physics()
@@ -28,7 +30,7 @@ func _init() -> void:
 		quit(1)
 
 func _test_config() -> bool:
-	print("[1/7] Testing CageConfig parameters...")
+	print("[1/8] Testing CageConfig parameters...")
 	assert(CageConfig.CAGE_WIDTH_X >= 15.0, "Cage width must be >= 15m")
 	assert(CageConfig.CAGE_HEIGHT_Y >= 5.0, "Cage height must be >= 5m")
 	assert(CageConfig.PLAYER_RADIUS > 0.0, "Player radius must be positive")
@@ -38,7 +40,7 @@ func _test_config() -> bool:
 	return true
 
 func _test_sound_manager() -> bool:
-	print("[2/7] Testing CageSoundManager procedural synthesis & audio pool...")
+	print("[2/8] Testing CageSoundManager procedural synthesis & audio pool...")
 	var sm = CageSoundManager.new()
 	assert(sm.stream_kick != null, "Kick audio stream must be generated")
 	assert(sm.stream_wall != null, "Wall audio stream must be generated")
@@ -49,7 +51,6 @@ func _test_sound_manager() -> bool:
 	assert(sm.stream_boost != null, "Boost audio stream must be generated")
 	assert(sm.stream_tackle != null, "Tackle audio stream must be generated")
 	
-	# Test playback guards outside tree
 	sm.play_kick(4.0)
 	sm.play_wall(3.0)
 	sm.play_post()
@@ -62,8 +63,31 @@ func _test_sound_manager() -> bool:
 	print("  -> CageSoundManager OK.")
 	return true
 
+func _test_juice_manager() -> bool:
+	print("[3/8] Testing CageJuiceManager particle pooling, flashes & trauma...")
+	var jm = CageJuiceManager.new()
+	root.add_child(jm)
+	jm._ready()
+	
+	assert(jm._turf_pool.size() == 8, "Turf pool size should be 8")
+	assert(jm._spark_pool.size() == 8, "Spark pool size should be 8")
+	assert(jm._confetti_pool.size() == 4, "Confetti pool size should be 4")
+	assert(jm._dash_pool.size() == 6, "Dash pool size should be 6")
+	assert(jm._goal_light != null, "Goal strobe light must exist")
+	
+	jm.spawn_turf_puff(Vector3.ZERO, 3.0)
+	jm.spawn_sparks(Vector3.ZERO, 4.0)
+	jm.spawn_goal_confetti(Vector3.ZERO)
+	jm.spawn_dash_dust(Vector3.ZERO, Vector3.FORWARD)
+	jm.trigger_goal_flash(Vector3.ZERO, 1)
+	jm.trigger_shake(0.5)
+	
+	jm.queue_free()
+	print("  -> CageJuiceManager OK.")
+	return true
+
 func _test_state_manager() -> bool:
-	print("[3/7] Testing CageStateManager...")
+	print("[4/8] Testing CageStateManager...")
 	var sm = CageStateManager.new()
 	sm.reset_match(10.0)
 	assert(sm.current_state == CageStateManager.MatchState.WARMUP or sm.current_state == CageStateManager.MatchState.KICKOFF, "Initial state should be WARMUP or KICKOFF")
@@ -97,7 +121,7 @@ func _test_state_manager() -> bool:
 	return true
 
 func _test_player_jump() -> bool:
-	print("[4/7] Testing CagePlayer kinematics & Ziplama jump...")
+	print("[5/8] Testing CagePlayer kinematics & Ziplama jump...")
 	var player = CagePlayer.new()
 	player.player_id = 1
 	root.add_child(player)
@@ -132,7 +156,7 @@ func _test_player_jump() -> bool:
 	return true
 
 func _test_ball_physics() -> bool:
-	print("[5/7] Testing SoccerBall physics & bounce...")
+	print("[6/8] Testing SoccerBall physics & bounce...")
 	var ball = SoccerBall.new()
 	root.add_child(ball)
 	ball._ready()
@@ -152,14 +176,18 @@ func _test_ball_physics() -> bool:
 	return true
 
 func _test_cage_camera() -> bool:
-	print("[6/7] Testing CageCamera dynamic tracking...")
+	print("[7/8] Testing CageCamera dynamic tracking & trauma shake...")
 	var cam = CageCamera.new()
 	var test_ball = Node3D.new()
 	test_ball.position = Vector3(4.0, 1.0, 2.0)
 	cam.ball_node = test_ball
 	root.add_child(cam)
 	
+	cam.add_trauma(0.6)
+	assert(cam.trauma > 0.0, "Camera trauma must be positive after add_trauma")
+	
 	cam.update_camera(0.1)
+	assert(cam.trauma < 0.6, "Trauma must decay over time")
 	assert(cam.position.y > 0.0, "Camera should have elevated height")
 	assert(cam.position.y < CageConfig.CAGE_HEIGHT_Y, "Camera MUST be inside cage vertically (< CAGE_HEIGHT_Y)")
 	assert(cam.position.z < CageConfig.CAGE_DEPTH_Z * 0.5, "Camera MUST be inside cage depth (< CAGE_DEPTH_Z / 2)")
@@ -178,7 +206,7 @@ func _test_cage_camera() -> bool:
 	return true
 
 func _test_main_scene() -> bool:
-	print("[7/7] Testing MainCageFootball full orchestration...")
+	print("[8/8] Testing MainCageFootball full orchestration...")
 	var main_scene = MainCageFootball.new()
 	root.add_child(main_scene)
 	main_scene._ready()

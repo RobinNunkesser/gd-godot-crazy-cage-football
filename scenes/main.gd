@@ -7,6 +7,7 @@ const CagePlayer = preload("res://scripts/player.gd")
 const SoccerBall = preload("res://scripts/ball.gd")
 const CageCamera = preload("res://scripts/cage_camera.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
+const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 
 var state_manager: CageStateManager
 var player1: CagePlayer
@@ -18,6 +19,7 @@ var ball: SoccerBall
 var camera: CageCamera
 var whistle_player: AudioStreamPlayer
 var sound_manager: CageSoundManager
+var juice_manager: CageJuiceManager
 
 var ui_lobby_panel: Control
 var ui_slot_labels: Array[Label] = []
@@ -184,6 +186,12 @@ func _build_scene() -> void:
 	camera.tracked_players.assign(players)
 	camera.current = true
 	add_child(camera)
+	
+	# 8. Cage Juice Manager (Partikel, Flash & Shake)
+	juice_manager = CageJuiceManager.new()
+	juice_manager.name = "CageJuiceManager"
+	juice_manager.camera = camera
+	add_child(juice_manager)
 
 func _build_wall(pos: Vector3, size: Vector3, wall_name: String, custom_color: Color = Color(0.75, 0.8, 0.85, 0.75)) -> void:
 	var body = StaticBody3D.new()
@@ -295,6 +303,10 @@ func _build_goal(side: int, scoring_team: int) -> void:
 				sound_manager.play_goal()
 			elif whistle_player and whistle_player.stream:
 				whistle_player.play()
+			if juice_manager:
+				juice_manager.spawn_goal_confetti(Vector3(goal_center_x, CageConfig.GOAL_HEIGHT * 0.5, 0))
+				juice_manager.trigger_goal_flash(Vector3(goal_center_x, CageConfig.GOAL_HEIGHT * 0.6, 0), scoring_team)
+				juice_manager.trigger_shake(0.8)
 			state_manager.trigger_goal(scoring_team)
 	)
 	add_child(area)
@@ -736,6 +748,12 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 			ui_banner_label.visible = true
 			if sound_manager:
 				sound_manager.play_goal()
+			if is_inside_tree():
+				ui_banner_label.pivot_offset = ui_banner_label.size * 0.5
+				ui_banner_label.scale = Vector2(1.4, 1.4)
+				var tween = create_tween()
+				tween.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+				tween.tween_property(ui_banner_label, "scale", Vector2.ONE, 0.45)
 			if state_manager.last_scoring_team == 1:
 				ui_banner_label.text = "⚽ GOOOOAL TEAM RED! ⚽"
 			elif state_manager.last_scoring_team == 2:
