@@ -68,6 +68,8 @@ func _ready() -> void:
 	_build_ui()
 	
 	state_manager.enter_lobby()
+	if sound_manager:
+		sound_manager.play_bgm()
 
 func _build_audio() -> void:
 	sound_manager = CageSoundManager.new()
@@ -542,7 +544,7 @@ func _build_ui() -> void:
 	ui_hud_container.add_child(ui_powerup_banner)
 	
 	var ui_hint = Label.new()
-	ui_hint.text = "[R]: Neustart  |  [ESC]: Zurück zur Lobby  |  [B]: P2 Bot Toggle"
+	ui_hint.text = "[R]: Neustart  |  [ESC]: Zurück zur Lobby  |  [B]: P2 Bot Toggle  |  [M]: Musik AN/AUS"
 	ui_hint.position = Vector2(40, 670)
 	ui_hint.add_theme_font_size_override("font_size", 16)
 	ui_hint.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 0.8))
@@ -702,6 +704,10 @@ func _update_score_label() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_M:
+			toggle_bgm_music()
+			return
+			
 		if state_manager.current_state == CageStateManager.MatchState.LOBBY:
 			if event.keycode == KEY_1:
 				cycle_player_slot(0)
@@ -730,6 +736,19 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_p2_bot()
 			elif event.keycode == KEY_P:
 				toggle_powerups()
+
+func toggle_bgm_music() -> void:
+	if sound_manager:
+		var active = sound_manager.toggle_bgm()
+		if ui_banner_label:
+			ui_banner_label.visible = true
+			ui_banner_label.text = "MUSIK: " + ("AN 🔊" if active else "AUS 🔇")
+			var tween = create_tween()
+			tween.tween_interval(1.2)
+			tween.tween_callback(func():
+				if is_instance_valid(ui_banner_label) and state_manager.current_state == CageStateManager.MatchState.PLAYING:
+					ui_banner_label.visible = false
+			)
 
 func toggle_powerups() -> void:
 	CageConfig.powerups_enabled = not CageConfig.powerups_enabled
@@ -934,6 +953,7 @@ func _on_state_changed(new_state: CageStateManager.MatchState) -> void:
 			ui_banner_label.visible = true
 			if sound_manager:
 				sound_manager.play_goal()
+				sound_manager.duck_bgm(2.5)
 			if is_inside_tree():
 				ui_banner_label.pivot_offset = ui_banner_label.size * 0.5
 				ui_banner_label.scale = Vector2(1.4, 1.4)
