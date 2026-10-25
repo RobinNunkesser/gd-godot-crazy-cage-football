@@ -34,6 +34,7 @@ Zwei rollende, elastische Kugel-Spieler mit Comic-Augen treten in einem geschlos
 | `[START]` | Match-Anstoß aus Lobby / Spiel pausieren |
 | `[F]` / Gamepad `[Y]` / `[LB]` | Kamera-Fokus umschalten (`Dynamic`, `Ball-Cam`, `Broadcast`) – auch in Lobby |
 | `[T]` / Gamepad `[RB]` | Arena-Theme umschalten (`Industrial`, `Sunny`, `Cyber`) |
+| `[O]` | On-Screen Touch-Controls umschalten (AN / AUS) |
 | `[P]` / Gamepad `[X]` | Power-Ups aktivieren / deaktivieren |
 | `[R]` | Match-Neustart / Rematch |
 | `[ESC]` / Gamepad `[B]` | Zurück zur Pre-Match-Lobby / Pausemenü schließen |
@@ -68,7 +69,7 @@ Aus der Sammlung *"5 Chiptunes (Action)"* von **Juhani Junkala (SubspaceAudio)**
 
 ---
 
-## 🚀 Export & GitHub Release (v0.2.2)
+## 🚀 Export & GitHub Release (v0.2.3)
 
 Automatisierte Multiplattform-Builds werden per GitHub Actions (`.github/workflows/export.yml`) bei jedem Git-Tag `v*` erstellt:
 - **Windows Desktop:** `CrazyCageFootball-Windows.zip` (`.exe`)

@@ -1895,6 +1895,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_T:
 			cycle_arena_theme()
 			return
+		elif event.keycode == KEY_O:
+			if touch_overlay:
+				var active = touch_overlay.toggle_touch_overlay()
+				if ui_banner_label:
+					ui_banner_label.visible = true
+					ui_banner_label.text = "TOUCH CONTROLS: ON" if active else "TOUCH CONTROLS: OFF"
+			return
 			
 		if state_manager.current_state == CageStateManager.MatchState.LOBBY:
 			if event.keycode == KEY_1:
