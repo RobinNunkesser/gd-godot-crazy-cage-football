@@ -63,32 +63,30 @@ func _init_themes() -> void:
 			"id": "sunny_rooftop",
 			"name_key": "THEME_SUNNY",
 			"default_name": "Sonnendach (Sommer)",
-			"sky_type": "procedural",
-			"skybox_path": "",
-			"sky_top_color": Color(0.32, 0.62, 0.95),
-			"sky_horizon_color": Color(0.75, 0.88, 1.0),
-			"ground_bottom_color": Color(0.55, 0.45, 0.35),
-			"ground_horizon_color": Color(0.75, 0.85, 0.95),
-			"sun_color": Color(1.0, 0.95, 0.82),
-			"sun_energy": 1.55,
+			"sky_type": "panorama",
+			"skybox_path": "res://assets/textures/rooftop_skybox.jpg",
+			"sun_color": Color(1.0, 0.98, 0.92),
+			"sun_energy": 1.85,
 			"sun_rotation": Vector3(-45, 30, 0),
-			"ambient_color": Color(0.45, 0.48, 0.55),
-			"ambient_energy": 0.7,
+			"ambient_color": Color(0.55, 0.65, 0.8),
+			"ambient_energy": 0.9,
 			"glow_bloom": 0.08,
 			"glow_intensity": 0.2,
-			"floor_texture": "",
-			"floor_color": Color(0.85, 0.38, 0.22), # Lebendiger roter Tartanbelag
-			"floor_roughness": 0.82,
+			"floor_texture": "res://assets/textures/rooftop_court_floor.jpg",
+			"floor_color": Color(1.0, 1.0, 1.0),
+			"floor_roughness": 0.78,
 			"floor_metallic": 0.02,
-			"floor_uv_scale": Vector3(10.0, 6.0, 1.0),
-			"board_color": Color(0.92, 0.90, 0.86), # Helle moderne Sportbanden
+			"floor_uv_scale": Vector3(1.0, 1.0, 1.0),
+			"board_color": Color(0.95, 0.95, 0.98), # Saubere weiße Sportbanden
 			"board_roughness": 0.35,
 			"board_metallic": 0.1,
 			"fence_texture": "res://assets/textures/chainlink_fence.jpg",
-			"fence_color": Color(1.0, 1.0, 1.0, 0.85), # Weiß lackierter Sportkäfig
+			"fence_color": Color(1.0, 1.0, 1.0, 0.88), # Weiß lackierter Sportkäfig
 			"fence_roughness": 0.3,
 			"fence_metallic": 0.35,
-			"goal_post_color": Color(1.0, 0.85, 0.15), # Strahlend sonnengelbe Pfosten
+			"goal_post_color": Color(1.0, 0.88, 0.15), # Strahlend sonnengelbe Pfosten
+			"goal_emission_enabled": false,
+			"player_glow_enabled": false,
 			"ball_pent_color": Color(0.96, 0.22, 0.42), # Sommer-Pink
 			"ball_hex_color": Color(1.0, 0.86, 0.12), # Sommer-Neongelb
 			"ball_seam_color": Color(0.2, 0.1, 0.12),
@@ -100,24 +98,20 @@ func _init_themes() -> void:
 			"id": "cyber_neon",
 			"name_key": "THEME_CYBER",
 			"default_name": "Cyber Neon (Synthwave)",
-			"sky_type": "procedural",
-			"skybox_path": "",
-			"sky_top_color": Color(0.015, 0.005, 0.05),
-			"sky_horizon_color": Color(0.22, 0.04, 0.35),
-			"ground_bottom_color": Color(0.01, 0.01, 0.02),
-			"ground_horizon_color": Color(0.12, 0.02, 0.20),
-			"sun_color": Color(0.55, 0.25, 0.95), # UV / Neon-Lilalicht
-			"sun_energy": 1.15,
+			"sky_type": "panorama",
+			"skybox_path": "res://assets/textures/cyber_skybox.jpg",
+			"sun_color": Color(0.85, 0.55, 1.0), # Strahlendes UV / Synthwave-Licht
+			"sun_energy": 2.0,
 			"sun_rotation": Vector3(-60, 45, 0),
-			"ambient_color": Color(0.1, 0.05, 0.2),
-			"ambient_energy": 0.6,
-			"glow_bloom": 0.45,
-			"glow_intensity": 0.85,
-			"floor_texture": "",
-			"floor_color": Color(0.05, 0.06, 0.10), # Dunkler spiegelnder Hightech-Boden
-			"floor_roughness": 0.18,
-			"floor_metallic": 0.85,
-			"floor_uv_scale": Vector3(10.0, 6.0, 1.0),
+			"ambient_color": Color(0.35, 0.22, 0.55),
+			"ambient_energy": 1.2,
+			"glow_bloom": 0.40,
+			"glow_intensity": 0.90,
+			"floor_texture": "res://assets/textures/cyber_grid_floor.jpg",
+			"floor_color": Color(1.0, 1.0, 1.0),
+			"floor_roughness": 0.2,
+			"floor_metallic": 0.75,
+			"floor_uv_scale": Vector3(1.0, 1.0, 1.0),
 			"board_color": Color(0.08, 0.12, 0.22), # Dunkle Cyber-Bande
 			"board_roughness": 0.2,
 			"board_metallic": 0.8,
@@ -126,12 +120,14 @@ func _init_themes() -> void:
 			"fence_roughness": 0.1,
 			"fence_metallic": 0.95,
 			"goal_post_color": Color(1.0, 0.15, 0.65), # Leuchtendes Magenta-Pink
+			"goal_emission_enabled": true,
+			"player_glow_enabled": true,
 			"ball_pent_color": Color(0.04, 0.06, 0.14),
 			"ball_hex_color": Color(0.08, 0.15, 0.25),
 			"ball_seam_color": Color(0.0, 1.0, 0.9), # Glühende Cyan-Nähte
-			"ball_emission_color": Color(0.0, 0.9, 1.0),
-			"ball_emission_energy": 1.8, # Ball glüht aktiv!
-			"turf_puff_color": Color(0.0, 0.9, 1.0) # Cyan-Plasmafunken
+			"ball_emission_color": Color(0.0, 0.95, 1.0),
+			"ball_emission_energy": 2.5, # Stark leuchtender Ball
+			"turf_puff_color": Color(0.0, 0.95, 1.0) # Cyan-Plasmafunken
 		}
 	]
 

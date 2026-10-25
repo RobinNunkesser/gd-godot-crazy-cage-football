@@ -18,6 +18,7 @@ var floor_inst: MeshInstance3D
 var board_instances: Array[MeshInstance3D] = []
 var fence_instances: Array[MeshInstance3D] = []
 var goal_post_instances: Array[MeshInstance3D] = []
+var goal_glow_lights: Array[OmniLight3D] = []
 
 var state_manager: CageStateManager
 var player1: CagePlayer
@@ -372,6 +373,17 @@ func _build_goal(side: int, scoring_team: int) -> void:
 			state_manager.trigger_goal(scoring_team)
 	)
 	add_child(area)
+	
+	# 6. Tor-Beleuchtung (Neon Glow Light im Cyber-Modus)
+	var glow_light = OmniLight3D.new()
+	glow_light.name = "%s_GlowLight" % prefix
+	glow_light.position = Vector3(goal_center_x, CageConfig.GOAL_HEIGHT * 0.75, 0)
+	glow_light.light_color = Color(0.15, 0.75, 1.0) if side < 0 else Color(1.0, 0.15, 0.65)
+	glow_light.light_energy = 3.5
+	glow_light.omni_range = 8.0
+	glow_light.visible = false
+	add_child(glow_light)
+	goal_glow_lights.append(glow_light)
 
 func _build_goal_posts(side: int) -> void:
 	var post_mat = StandardMaterial3D.new()
@@ -934,8 +946,13 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 		var floor_mat = StandardMaterial3D.new()
 		var tex_path = str(t.get("floor_texture", ""))
 		if not tex_path.is_empty() and ResourceLoader.exists(tex_path):
-			floor_mat.albedo_texture = load(tex_path)
+			var tex = load(tex_path)
+			floor_mat.albedo_texture = tex
 			floor_mat.uv1_scale = t.get("floor_uv_scale", Vector3(10.0, 6.0, 1.0))
+			if bool(t.get("goal_emission_enabled", false)):
+				floor_mat.emission_enabled = true
+				floor_mat.emission_texture = tex
+				floor_mat.emission_energy_multiplier = 0.65
 		else:
 			floor_mat.albedo_color = t.get("floor_color", Color(0.28, 0.32, 0.36))
 		floor_mat.roughness = float(t.get("floor_roughness", 0.75))
@@ -970,14 +987,23 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 			f_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 			f.material_override = f_mat
 
-	# 6. Goal Posts
+	# 6. Goal Posts & Neon Glow
+	var goal_emission = bool(t.get("goal_emission_enabled", false))
 	for p in goal_post_instances:
 		if is_instance_valid(p):
 			var p_mat = StandardMaterial3D.new()
 			p_mat.albedo_color = t.get("goal_post_color", Color(0.95, 0.95, 0.95))
 			p_mat.roughness = 0.2
 			p_mat.metallic = 0.8
+			if goal_emission:
+				p_mat.emission_enabled = true
+				p_mat.emission = t.get("goal_post_color", Color(1.0, 0.15, 0.65))
+				p_mat.emission_energy_multiplier = 3.0
 			p.material_override = p_mat
+
+	for gl in goal_glow_lights:
+		if is_instance_valid(gl):
+			gl.visible = goal_emission
 
 	# 7. Ball
 	if ball and ball.has_method("set_theme_colors"):
@@ -989,7 +1015,13 @@ func apply_theme(t: Dictionary, is_live_switch: bool = false) -> void:
 			float(t.get("ball_emission_energy", 0.0))
 		)
 
-	# 8. Juice Manager
+	# 8. Players Underglow & Light
+	var player_glow = bool(t.get("player_glow_enabled", false))
+	for p in players:
+		if is_instance_valid(p) and p.has_method("set_cyber_glow"):
+			p.set_cyber_glow(player_glow)
+
+	# 9. Juice Manager
 	if juice_manager and juice_manager.has_method("set_turf_color"):
 		juice_manager.set_turf_color(t.get("turf_puff_color", Color(0.2, 0.75, 0.25)))
 

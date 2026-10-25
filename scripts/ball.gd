@@ -6,6 +6,7 @@ const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 
 var _mesh_instance: MeshInstance3D
+var _ball_light: OmniLight3D = null
 var _pending_teleport: bool = false
 var _teleport_target: Vector3 = Vector3.ZERO
 var is_super_shot: bool = false
@@ -246,6 +247,19 @@ func set_theme_colors(pent: Color, hex: Color, seam: Color, emissive: Color = Co
 		sm.set_shader_parameter("seam_color", Vector3(seam.r, seam.g, seam.b))
 		sm.set_shader_parameter("emission_color", Vector3(emissive.r, emissive.g, emissive.b))
 		sm.set_shader_parameter("emission_energy", emissive_energy)
+	
+	if emissive_energy > 0.05:
+		if not _ball_light and is_inside_tree():
+			_ball_light = OmniLight3D.new()
+			_ball_light.name = "BallLight"
+			add_child(_ball_light)
+		if _ball_light:
+			_ball_light.visible = true
+			_ball_light.light_color = emissive
+			_ball_light.light_energy = emissive_energy * 1.5
+			_ball_light.omni_range = 6.0
+	elif _ball_light:
+		_ball_light.visible = false
 
 func reset_to_center() -> void:
 	_teleport_target = Vector3(0.0, CageConfig.BALL_RADIUS + 0.1, 0.0)

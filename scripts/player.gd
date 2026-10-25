@@ -45,11 +45,34 @@ var stumble_timer: float = 0.0
 var _eyes_pivot: Node3D
 var _mesh_instance: MeshInstance3D
 var _aura_ring: MeshInstance3D
+var _underglow_light: OmniLight3D
 var _pending_teleport: bool = false
 var _teleport_target: Vector3 = Vector3.ZERO
 var _stuck_timer: float = 0.0
 var _unstuck_mode_timer: float = 0.0
 var _unstuck_dir: Vector3 = Vector3.ZERO
+
+func set_cyber_glow(enabled: bool) -> void:
+	if not _underglow_light and is_inside_tree():
+		_underglow_light = OmniLight3D.new()
+		_underglow_light.name = "UnderglowLight"
+		_underglow_light.position = Vector3(0, 0.25, 0)
+		_underglow_light.light_color = ball_color
+		_underglow_light.light_energy = 2.4
+		_underglow_light.omni_range = 5.0
+		add_child(_underglow_light)
+	if _underglow_light:
+		_underglow_light.visible = enabled
+		_underglow_light.light_color = ball_color
+	
+	if _mesh_instance and _mesh_instance.material_override is StandardMaterial3D:
+		var sm = _mesh_instance.material_override as StandardMaterial3D
+		if enabled:
+			sm.emission_enabled = true
+			sm.emission = ball_color
+			sm.emission_energy_multiplier = 0.9
+		else:
+			sm.emission_enabled = false
 
 func _ready() -> void:
 	add_to_group("players")

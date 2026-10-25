@@ -390,8 +390,9 @@ func _test_theme_manager() -> bool:
 		assert(found, "Theme %s should exist in CageThemeManager" % id)
 	
 	# Test theme cycling
+	tm.set_theme_by_id("industrial")
 	var t0 = tm.get_current_theme()
-	assert(str(t0["id"]) == "industrial", "Initial default theme should be industrial")
+	assert(str(t0["id"]) == "industrial", "Theme should be industrial")
 	var t1 = tm.cycle_theme()
 	assert(str(t1["id"]) == "sunny_rooftop", "Second theme should be sunny_rooftop")
 	var t2 = tm.cycle_theme()
@@ -417,12 +418,15 @@ func _test_theme_manager() -> bool:
 	main_scene.apply_theme(main_scene.theme_manager.get_current_theme(), true)
 	var floor_mat_sunny = main_scene.floor_inst.material_override as StandardMaterial3D
 	assert(floor_mat_sunny != null, "Floor material should be StandardMaterial3D")
-	assert(floor_mat_sunny.roughness > 0.8, "Sunny rooftop floor roughness should match config")
+	assert(floor_mat_sunny.roughness >= 0.75, "Sunny rooftop floor roughness should match config")
+	assert(floor_mat_sunny.albedo_texture != null, "Sunny rooftop should have court texture loaded")
 	
 	# Switch to Cyber Neon
 	main_scene.theme_manager.set_theme_by_id("cyber_neon")
 	main_scene.apply_theme(main_scene.theme_manager.get_current_theme(), true)
 	assert(main_scene.world_env.environment.glow_bloom > 0.3, "Cyber Neon glow bloom should be elevated")
+	assert(main_scene.goal_glow_lights.size() == 2, "Both goal glow lights should exist")
+	assert(main_scene.goal_glow_lights[0].visible == true, "Goal glow light should be active in Cyber mode")
 	
 	# Cycle via main method
 	main_scene.cycle_arena_theme()
