@@ -82,3 +82,15 @@ godot --headless -s test_gameplay.gd
 ```
 Exits mit `0` bei Erfolg.
 
+---
+
+## 🔮 Geplante Weiterentwicklungen & CI/CD Roadmap
+
+- **macOS Code Signing & Notarisierung in CI/CD:**
+  - Automatisches Signieren mit Apple Developer ID (`codesign` mit Hardened Runtime) und Notarisierung via `notarytool` im GitHub-Actions-Workflow (`.github/workflows/export.yml`), damit macOS-Builds ohne Gatekeeper-Warnung direkt startbar sind.
+  - Erforderliche GitHub Actions Secrets: `APPLE_CERTIFICATE_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_ID_PASSWORD`, `APPLE_TEAM_ID`.
+- **itch.io Verteilung via Butler:**
+  - Automatischer Upload der Web- und Desktop-Artefakte per Butler CLI in eigene Kanäle (`html5`, `windows`, `osx`, `linux`).
+- **Mac App Store Distribution:**
+  - Bereitstellung mit Sandboxing-Entitlements und Apple Distribution Zertifikat als signiertes `.pkg` via Transporter / `xcrun altool`.
+
