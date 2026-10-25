@@ -8,6 +8,7 @@ const SoccerBall = preload("res://scripts/ball.gd")
 const CageCamera = preload("res://scripts/cage_camera.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
+const CagePowerUp = preload("res://scripts/power_up.gd")
 
 var state_manager: CageStateManager
 var player1: CagePlayer
@@ -20,6 +21,19 @@ var camera: CageCamera
 var whistle_player: AudioStreamPlayer
 var sound_manager: CageSoundManager
 var juice_manager: CageJuiceManager
+
+var active_power_ups: Array[CagePowerUp] = []
+var _power_up_spawn_timer: float = 0.0
+var ui_powerup_toggle_label: Label
+
+const BOARD_SPAWN_POINTS: Array[Vector3] = [
+	Vector3(-7.5, 0.55, -5.8),
+	Vector3(0.0, 0.55, -5.8),
+	Vector3(7.5, 0.55, -5.8),
+	Vector3(-7.5, 0.55, 5.8),
+	Vector3(0.0, 0.55, 5.8),
+	Vector3(7.5, 0.55, 5.8)
+]
 
 var ui_lobby_panel: Control
 var ui_slot_labels: Array[Label] = []
@@ -554,6 +568,14 @@ func _build_ui() -> void:
 		key_hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 		card.add_child(key_hint)
 	
+	ui_powerup_toggle_label = Label.new()
+	ui_powerup_toggle_label.position = Vector2(100, 550)
+	ui_powerup_toggle_label.size = Vector2(1080, 45)
+	ui_powerup_toggle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_powerup_toggle_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ui_powerup_toggle_label.add_theme_font_size_override("font_size", 21)
+	ui_lobby_panel.add_child(ui_powerup_toggle_label)
+	
 	_update_lobby_ui()
 	canvas.add_child(ui_lobby_panel)
 	add_child(canvas)
@@ -568,6 +590,14 @@ func _update_lobby_ui() -> void:
 		else:
 			ui_team_labels[i].text = "TEAM BLAU (2)"
 			ui_team_labels[i].add_theme_color_override("font_color", Color(0.3, 0.6, 1.0))
+	
+	if ui_powerup_toggle_label:
+		if CageConfig.powerups_enabled:
+			ui_powerup_toggle_label.text = "⚡ [P] POWER-UPS: AKTIVIERT  •  Super-Shot | Speed-Boots | Magnetfuß | Freeze-Tackle | Cage-Shaker ⚡"
+			ui_powerup_toggle_label.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
+		else:
+			ui_powerup_toggle_label.text = "🚫 [P] POWER-UPS: DEAKTIVIERT (Klassischer Pure-Cage-Modus ohne Pickups) 🚫"
+			ui_powerup_toggle_label.add_theme_color_override("font_color", Color(0.9, 0.45, 0.45))
 
 func _get_control_type_name(ct: CagePlayer.ControlType) -> String:
 	match ct:
@@ -637,6 +667,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_player_team(2)
 			elif event.keycode == KEY_R:
 				toggle_player_team(3)
+			elif event.keycode == KEY_P:
+				toggle_powerups()
 			elif event.keycode == KEY_SPACE or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
 				start_match_from_lobby()
 		else:
@@ -644,6 +676,59 @@ func _unhandled_input(event: InputEvent) -> void:
 				return_to_lobby()
 			elif event.keycode == KEY_B:
 				toggle_p2_bot()
+			elif event.keycode == KEY_P:
+				toggle_powerups()
+
+func toggle_powerups() -> void:
+	CageConfig.powerups_enabled = not CageConfig.powerups_enabled
+	if not CageConfig.powerups_enabled:
+		clear_power_ups()
+	_update_lobby_ui()
+	if ui_banner_label and state_manager.current_state != CageStateManager.MatchState.LOBBY:
+		ui_banner_label.text = "POWER-UPS: " + ("AKTIVIERT" if CageConfig.powerups_enabled else "DEAKTIVIERT")
+
+func clear_power_ups() -> void:
+	for p in active_power_ups:
+		if is_instance_valid(p):
+			p.queue_free()
+	active_power_ups.clear()
+
+func spawn_power_up(chosen_type: CageConfig.PowerUpType = CageConfig.PowerUpType.NONE, spawn_pos: Vector3 = Vector3.ZERO) -> CagePowerUp:
+	if not CageConfig.powerups_enabled:
+		return null
+	
+	if spawn_pos == Vector3.ZERO:
+		var free_spots: Array[Vector3] = []
+		for spot in BOARD_SPAWN_POINTS:
+			var occupied = false
+			for pup in active_power_ups:
+				if is_instance_valid(pup) and pup.position.distance_to(spot) < 2.2:
+					occupied = true
+					break
+			if not occupied:
+				free_spots.append(spot)
+		if free_spots.is_empty():
+			return null
+		spawn_pos = free_spots[randi() % free_spots.size()]
+	
+	if chosen_type == CageConfig.PowerUpType.NONE:
+		chosen_type = randi_range(1, 5) as CageConfig.PowerUpType
+	
+	var pup = CagePowerUp.new()
+	pup.type = chosen_type
+	pup.position = spawn_pos
+	pup.power_up_collected.connect(_on_power_up_collected)
+	active_power_ups.append(pup)
+	add_child(pup)
+	return pup
+
+func _on_power_up_collected(player: CagePlayer, type: CageConfig.PowerUpType) -> void:
+	for i in range(active_power_ups.size() - 1, -1, -1):
+		if not is_instance_valid(active_power_ups[i]) or active_power_ups[i].is_queued_for_deletion():
+			active_power_ups.remove_at(i)
+	player.apply_power_up(type)
+	if ui_banner_label:
+		ui_banner_label.text = "⚡ SPIELER %d: %s ⚡" % [player.player_id, CagePowerUp.get_type_name(type)]
 
 func start_match_from_lobby() -> void:
 	var team1_count = 0
@@ -661,10 +746,17 @@ func start_match_from_lobby() -> void:
 	
 	ui_lobby_panel.visible = false
 	ui_hud_container.visible = true
+	_power_up_spawn_timer = 0.0
+	clear_power_ups()
 	reset_positions()
 	state_manager.start_match()
+	
+	if CageConfig.powerups_enabled:
+		spawn_power_up()
+		spawn_power_up()
 
 func return_to_lobby() -> void:
+	clear_power_ups()
 	for p in players:
 		p.freeze = true
 	if ball:
@@ -684,12 +776,27 @@ func _process(delta: float) -> void:
 		else:
 			ui_banner_label.text = "⚽ KICK OFF! ⚽"
 	
+	if state_manager.current_state == CageStateManager.MatchState.PLAYING:
+		if CageConfig.powerups_enabled:
+			_power_up_spawn_timer += delta
+			if _power_up_spawn_timer >= CageConfig.POWERUP_SPAWN_INTERVAL:
+				_power_up_spawn_timer = 0.0
+				for i in range(active_power_ups.size() - 1, -1, -1):
+					if not is_instance_valid(active_power_ups[i]):
+						active_power_ups.remove_at(i)
+				if active_power_ups.size() < CageConfig.POWERUP_MAX_ACTIVE:
+					spawn_power_up()
+	
 	if Input.is_action_just_pressed("restart") and state_manager.current_state != CageStateManager.MatchState.LOBBY:
 		restart_game()
 
 func restart_game() -> void:
+	clear_power_ups()
 	reset_positions()
 	state_manager.reset_match()
+	if CageConfig.powerups_enabled:
+		spawn_power_up()
+		spawn_power_up()
 
 func reset_positions() -> void:
 	var spawn_spots_team1 = [

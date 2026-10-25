@@ -8,6 +8,20 @@ const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 var _mesh_instance: MeshInstance3D
 var _pending_teleport: bool = false
 var _teleport_target: Vector3 = Vector3.ZERO
+var is_super_shot: bool = false
+var _super_shot_timer: float = 0.0
+
+func trigger_super_shot(dir: Vector3, force_multiplier: float = CageConfig.POWERUP_SUPER_SHOT_MULT) -> void:
+	is_super_shot = true
+	_super_shot_timer = 2.5
+	var shoot_dir = dir.normalized()
+	apply_central_impulse(shoot_dir * (linear_velocity.length() * force_multiplier + 14.0))
+	var pos = global_position if is_inside_tree() else position
+	if CageJuiceManager.instance:
+		CageJuiceManager.instance.spawn_sparks(pos, 22.0)
+		CageJuiceManager.instance.trigger_shake(0.45)
+	if CageSoundManager.instance:
+		CageSoundManager.instance.play_kick(25.0)
 
 func _ready() -> void:
 	mass = CageConfig.BALL_MASS
@@ -82,7 +96,12 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		state.angular_velocity = Vector3.ZERO
 		_pending_teleport = false
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	if is_super_shot:
+		_super_shot_timer -= delta
+		if _super_shot_timer <= 0.0:
+			is_super_shot = false
+			
 	var cur_pos = global_position if is_inside_tree() else position
 	if cur_pos.y < -0.8 or absf(cur_pos.x) > (CageConfig.CAGE_WIDTH_X * 0.5 + CageConfig.GOAL_DEPTH + 1.5) or absf(cur_pos.z) > (CageConfig.CAGE_DEPTH_Z * 0.5 + 1.5):
 		reset_to_center()

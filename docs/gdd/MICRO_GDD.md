@@ -61,12 +61,22 @@ flowchart LR
    - `Area3D` hinter der Torlinie detektiert den Ball für Torerfolge.
 
 ### 4.2 State Space des Matches
+- `LOBBY` (Steuerungs-Auswahl 1v1 bis 2v2, Team-Toggles und Power-Up Schalter `[P]`)
 - `KICKOFF` (Spieler auf Startpositionen, Ball in Spielfeldmitte, wartet auf Anstoß)
+- `WARMUP` (3-Sekunden Countdown vor Matchbeginn)
 - `PLAYING` (Match läuft, 3-Minuten-Timer zählt herunter)
 - `GOAL_SCORED` (Torpfiff ertönt, Freeze-Frame & Torkamera)
 - `CELEBRATION` (2 Sekunden Torjubel)
 - `RESET` (Sanfter Reset zum Anstoßkreis)
 - `MATCH_OVER` (Endstand, Abpfiff, Siegeranzeige)
+
+### 4.3 Zufällige Pickups an den Käfigbanden (Konsolidiert)
+In der Lobby per Taste `[P]` ein- und ausschaltbar. Bei aktivem Modus spawnen bis zu 3 rotierende 3D-Tokens entlang der 6 Banden-Zonen:
+1. **🔥 Super-Shot / Feuerball:** Nächster Schuss besitzt $2.2\times$ Speed & Flammen-Aura; wirft Verteidiger in der Flugbahn um.
+2. **⚡ Speed-Boots:** Sprint-Boost für $6\,\text{s}$ ($+60\,\%$ Beschleunigung, $+55\,\%$ Höchstgeschwindigkeit).
+3. **🧲 Magnetfuß / Klebeball:** Zieht den Ball im $3.8\,\text{m}$-Nahbereich magnetisch an für enges Dribbeln.
+4. **❄️ Freeze-Tackle:** Der nächste Bodycheck/Tackle friert den Gegenspieler für $2.0\,\text{s}$ als Eisblock ein.
+5. **💥 Cage-Shaker:** Sofortige Stoßwelle erschüttert den Käfig und schleudert alle Rivalen mit hoher Wucht von den Banden weg.
 
 ---
 

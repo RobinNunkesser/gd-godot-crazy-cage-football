@@ -45,3 +45,24 @@ const CAMERA_HEIGHT: float = 5.2
 const CAMERA_OFFSET_Z: float = 6.0
 const CAMERA_LERP_SPEED: float = 5.0
 
+# Power-Up Parameter & Typen (Konsolidiert: 5 Pickups)
+enum PowerUpType {
+	NONE,
+	SUPER_SHOT,    # 1. Super-Shot / Feuerball (Ball brennt, fliegt mit 2x Speed)
+	SPEED_BOOTS,   # 2. Speed-Boots (Sprint-Boost für 6 s)
+	MAGNET_FOOT,   # 3. Magnetfuß / Klebeball (Ball haftet am Spieler für Dribblings)
+	FREEZE_TACKLE, # 4. Freeze-Tackle (Gegenspieler wird 2 s eingefroren)
+	CAGE_SHAKER    # 5. Cage-Shaker (Stoßwelle schleudert Gegner von den Banden)
+}
+
+static var powerups_enabled: bool = true
+
+const POWERUP_SPAWN_INTERVAL: float = 10.0
+const POWERUP_MAX_ACTIVE: int = 3
+const POWERUP_RADIUS: float = 0.45
+const POWERUP_SPEED_DURATION: float = 6.0
+const POWERUP_MAGNET_DURATION: float = 6.0
+const POWERUP_FREEZE_DURATION: float = 2.0
+const POWERUP_SUPER_SHOT_MULT: float = 2.2
+
+

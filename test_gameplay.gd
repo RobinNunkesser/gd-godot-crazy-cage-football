@@ -21,6 +21,7 @@ func _init() -> void:
 	success = success and _test_ball_physics()
 	success = success and _test_cage_camera()
 	success = success and _test_main_scene()
+	success = success and _test_power_ups()
 	
 	if success:
 		print("=== ALL TESTS FOR CRAZY CAGE FOOTBALL PASSED SUCCESSFULLY! ===\n")
@@ -252,3 +253,73 @@ func _test_main_scene() -> bool:
 	main_scene.queue_free()
 	print("  -> MainCageFootball & 4-Player Teams OK.")
 	return true
+
+func _test_power_ups() -> bool:
+	print("[9/9] Testing 5 Power-Up Pickups & Lobby Toggle...")
+	
+	# 1. CageConfig & Enums
+	assert(CageConfig.PowerUpType.SUPER_SHOT == 1, "SUPER_SHOT enum must be 1")
+	assert(CageConfig.PowerUpType.SPEED_BOOTS == 2, "SPEED_BOOTS enum must be 2")
+	assert(CageConfig.PowerUpType.MAGNET_FOOT == 3, "MAGNET_FOOT enum must be 3")
+	assert(CageConfig.PowerUpType.FREEZE_TACKLE == 4, "FREEZE_TACKLE enum must be 4")
+	assert(CageConfig.PowerUpType.CAGE_SHAKER == 5, "CAGE_SHAKER enum must be 5")
+	
+	var main_scene = MainCageFootball.new()
+	root.add_child(main_scene)
+	main_scene._ready()
+	
+	var p1 = main_scene.player1
+	var p2 = main_scene.player2
+	var ball = main_scene.ball
+	
+	# 2. Toggle im Hauptmenü (Aktivierbar / Deaktivierbar)
+	CageConfig.powerups_enabled = true
+	main_scene.toggle_powerups()
+	assert(not CageConfig.powerups_enabled, "Powerups should be toggled OFF")
+	assert(main_scene.spawn_power_up() == null, "Spawner should return null when powerups are OFF")
+	
+	main_scene.toggle_powerups()
+	assert(CageConfig.powerups_enabled, "Powerups should be toggled ON")
+	
+	# 3. Test Pickup Token Spawning
+	var pup = main_scene.spawn_power_up(CageConfig.PowerUpType.SUPER_SHOT, Vector3(0.0, 0.55, -5.8))
+	assert(pup != null, "PowerUp token should be spawned")
+	assert(pup.type == CageConfig.PowerUpType.SUPER_SHOT, "Type should match SUPER_SHOT")
+	assert(main_scene.active_power_ups.has(pup), "Active powerups list should track token")
+	
+	# 4. Test Super-Shot
+	p1.apply_power_up(CageConfig.PowerUpType.SUPER_SHOT)
+	assert(p1.has_super_shot, "Player 1 should have super shot active")
+	ball.trigger_super_shot(Vector3.RIGHT, CageConfig.POWERUP_SUPER_SHOT_MULT)
+	assert(ball.is_super_shot, "Ball should have active super shot state")
+	
+	# 5. Test Speed-Boots
+	p1.apply_power_up(CageConfig.PowerUpType.SPEED_BOOTS)
+	assert(p1.speed_boost_timer > 5.0, "Speed boost timer should be initialized")
+	p1._clamp_speed()
+	
+	# 6. Test Magnetfuß
+	p1.apply_power_up(CageConfig.PowerUpType.MAGNET_FOOT)
+	assert(p1.magnet_timer > 5.0, "Magnet timer should be initialized")
+	
+	# 7. Test Freeze-Tackle
+	p1.apply_power_up(CageConfig.PowerUpType.FREEZE_TACKLE)
+	assert(p1.freeze_tackle_ready, "Freeze tackle should be primed")
+	p2.freeze_player(2.0)
+	assert(p2.is_frozen, "Player 2 should be frozen")
+	assert(p2.freeze_timer > 1.5, "Freeze timer should be set")
+	p2.unfreeze_player()
+	assert(not p2.is_frozen, "Player 2 should be unfrozen")
+	
+	# 8. Test Cage-Shaker
+	p1.apply_power_up(CageConfig.PowerUpType.CAGE_SHAKER)
+	# Cage-Shaker executes shockwave immediately
+	
+	# 9. Cleanup & Reset
+	main_scene.clear_power_ups()
+	assert(main_scene.active_power_ups.is_empty(), "All powerup tokens should be cleared")
+	
+	main_scene.queue_free()
+	print("  -> All 5 Power-Ups & Toggle verified successfully.")
+	return true
+

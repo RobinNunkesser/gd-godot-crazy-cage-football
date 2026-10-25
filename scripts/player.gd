@@ -31,8 +31,18 @@ var is_bot: bool:
 var boost_cooldown: float = 0.0
 var target_ball: Node3D = null
 
+# Power-Up Status
+var active_power_up: CageConfig.PowerUpType = CageConfig.PowerUpType.NONE
+var speed_boost_timer: float = 0.0
+var magnet_timer: float = 0.0
+var freeze_tackle_ready: bool = false
+var has_super_shot: bool = false
+var is_frozen: bool = false
+var freeze_timer: float = 0.0
+
 var _eyes_pivot: Node3D
 var _mesh_instance: MeshInstance3D
+var _aura_ring: MeshInstance3D
 var _pending_teleport: bool = false
 var _teleport_target: Vector3 = Vector3.ZERO
 var _stuck_timer: float = 0.0
@@ -40,6 +50,7 @@ var _unstuck_mode_timer: float = 0.0
 var _unstuck_dir: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
+	add_to_group("players")
 	mass = CageConfig.PLAYER_MASS
 	linear_damp = 1.0
 	angular_damp = 1.0
@@ -56,9 +67,28 @@ func _ready() -> void:
 	
 	_setup_collision()
 	_setup_visuals()
+	_setup_aura()
 
 func _on_body_entered(body: Node) -> void:
-	if body is CagePlayer:
+	if body is SoccerBall:
+		if has_super_shot:
+			var shoot_dir = (body.global_position - global_position).normalized() if is_inside_tree() else Vector3.RIGHT
+			if shoot_dir.length_squared() < 0.01:
+				shoot_dir = Vector3.RIGHT if team_id == 1 else Vector3.LEFT
+			shoot_dir.y = 0.32
+			body.trigger_super_shot(shoot_dir, CageConfig.POWERUP_SUPER_SHOT_MULT)
+			has_super_shot = false
+			if active_power_up == CageConfig.PowerUpType.SUPER_SHOT:
+				active_power_up = CageConfig.PowerUpType.NONE
+			_update_aura()
+	elif body is CagePlayer:
+		if freeze_tackle_ready and body.team_id != team_id:
+			body.freeze_player(CageConfig.POWERUP_FREEZE_DURATION)
+			freeze_tackle_ready = false
+			if active_power_up == CageConfig.PowerUpType.FREEZE_TACKLE:
+				active_power_up = CageConfig.PowerUpType.NONE
+			_update_aura()
+			
 		var rel_speed = (linear_velocity - body.linear_velocity).length()
 		if CageSoundManager.instance:
 			CageSoundManager.instance.play_tackle(rel_speed)
@@ -138,8 +168,36 @@ func _physics_process(delta: float) -> void:
 		reset_to(Vector3(safe_x, CageConfig.PLAYER_RADIUS, 0.0))
 		return
 
+	# Freeze-Zustand: Bewegung & Input vollständig blockiert
+	if is_frozen:
+		freeze_timer -= delta
+		if freeze_timer <= 0.0:
+			unfreeze_player()
+		_clamp_speed()
+		_update_eyes()
+		return
+
 	if boost_cooldown > 0.0:
 		boost_cooldown -= delta
+
+	# Power-Up Laufzeiten
+	if speed_boost_timer > 0.0:
+		speed_boost_timer -= delta
+		if speed_boost_timer <= 0.0 and active_power_up == CageConfig.PowerUpType.SPEED_BOOTS:
+			active_power_up = CageConfig.PowerUpType.NONE
+			_update_aura()
+			
+	if magnet_timer > 0.0:
+		magnet_timer -= delta
+		if is_instance_valid(target_ball):
+			var bpos = target_ball.global_position if (is_inside_tree() and target_ball.is_inside_tree()) else target_ball.position
+			var diff = cur_pos - bpos
+			var dist = diff.length()
+			if dist < 4.2 and dist > 0.8:
+				target_ball.apply_central_force(diff.normalized() * 32.0)
+		if magnet_timer <= 0.0 and active_power_up == CageConfig.PowerUpType.MAGNET_FOOT:
+			active_power_up = CageConfig.PowerUpType.NONE
+			_update_aura()
 	
 	if is_bot:
 		_handle_bot_ai(delta)
@@ -271,7 +329,8 @@ func _handle_input(_delta: float) -> void:
 	if input_vec.length_squared() > 0.01:
 		input_vec = input_vec.normalized()
 		var move_dir = Vector3(input_vec.x, 0.0, input_vec.y)
-		apply_central_force(move_dir * CageConfig.PLAYER_DRIVE_FORCE)
+		var drive = CageConfig.PLAYER_DRIVE_FORCE * (1.6 if speed_boost_timer > 0.0 else 1.0)
+		apply_central_force(move_dir * drive)
 	
 	if jump_pressed:
 		trigger_jump()
@@ -324,9 +383,10 @@ func trigger_boost(input_vec: Vector2) -> void:
 		CageJuiceManager.instance.trigger_shake(0.18)
 
 func _clamp_speed() -> void:
+	var max_spd = CageConfig.PLAYER_MAX_SPEED * (1.55 if speed_boost_timer > 0.0 else 1.0)
 	var horiz_vel = Vector3(linear_velocity.x, 0.0, linear_velocity.z)
-	if horiz_vel.length() > CageConfig.PLAYER_MAX_SPEED:
-		var clamped = horiz_vel.normalized() * CageConfig.PLAYER_MAX_SPEED
+	if horiz_vel.length() > max_spd:
+		var clamped = horiz_vel.normalized() * max_spd
 		linear_velocity.x = clamped.x
 		linear_velocity.z = clamped.z
 
@@ -334,6 +394,135 @@ func _update_eyes() -> void:
 	if _eyes_pivot and is_instance_valid(target_ball) and is_inside_tree() and target_ball.is_inside_tree():
 		var target_pos = target_ball.global_position
 		_eyes_pivot.look_at(target_pos, Vector3.UP)
+
+# --- Power-Up System ---
+
+func apply_power_up(type: CageConfig.PowerUpType) -> void:
+	active_power_up = type
+	match type:
+		CageConfig.PowerUpType.SUPER_SHOT:
+			has_super_shot = true
+		CageConfig.PowerUpType.SPEED_BOOTS:
+			speed_boost_timer = CageConfig.POWERUP_SPEED_DURATION
+		CageConfig.PowerUpType.MAGNET_FOOT:
+			magnet_timer = CageConfig.POWERUP_MAGNET_DURATION
+		CageConfig.PowerUpType.FREEZE_TACKLE:
+			freeze_tackle_ready = true
+		CageConfig.PowerUpType.CAGE_SHAKER:
+			trigger_cage_shaker()
+	_update_aura()
+
+func trigger_cage_shaker() -> void:
+	active_power_up = CageConfig.PowerUpType.NONE
+	_update_aura()
+	var my_pos = global_position if is_inside_tree() else position
+	
+	# Finde alle Spieler im Szenenbaum
+	var all_players: Array[Node] = []
+	if is_inside_tree():
+		all_players = get_tree().get_nodes_in_group("players")
+	if all_players.is_empty() and get_parent():
+		for child in get_parent().get_children():
+			if child is CagePlayer:
+				all_players.append(child)
+	
+	for opp in all_players:
+		if opp is CagePlayer and opp != self and opp.team_id != team_id:
+			var opp_pos = opp.global_position if opp.is_inside_tree() else opp.position
+			var push_dir = (opp_pos - my_pos).normalized()
+			if push_dir.length_squared() < 0.01:
+				push_dir = Vector3(1.0, 0.35, 0.0)
+			else:
+				push_dir.y = 0.35
+				push_dir = push_dir.normalized()
+			opp.apply_central_impulse(push_dir * 28.0)
+			if CageJuiceManager.instance:
+				CageJuiceManager.instance.spawn_sparks(opp_pos, 16.0)
+	
+	if CageJuiceManager.instance:
+		CageJuiceManager.instance.trigger_shake(0.6)
+		CageJuiceManager.instance.spawn_sparks(my_pos, 25.0)
+	if CageSoundManager.instance:
+		CageSoundManager.instance.play_wall(25.0)
+
+func freeze_player(duration: float = CageConfig.POWERUP_FREEZE_DURATION) -> void:
+	is_frozen = true
+	freeze_timer = duration
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	if _mesh_instance and _mesh_instance.material_override is StandardMaterial3D:
+		var ice_mat = _mesh_instance.material_override.duplicate()
+		ice_mat.albedo_color = Color(0.4, 0.85, 1.0, 0.95)
+		ice_mat.roughness = 0.1
+		ice_mat.metallic = 0.75
+		ice_mat.emission_enabled = true
+		ice_mat.emission = Color(0.25, 0.75, 1.0)
+		ice_mat.emission_energy_multiplier = 1.6
+		_mesh_instance.material_override = ice_mat
+	if CageJuiceManager.instance:
+		var pos = global_position if is_inside_tree() else position
+		CageJuiceManager.instance.spawn_turf_puff(pos, 8.0)
+		CageJuiceManager.instance.trigger_shake(0.25)
+	if CageSoundManager.instance:
+		CageSoundManager.instance.play_post()
+	_update_aura()
+
+func unfreeze_player() -> void:
+	is_frozen = false
+	freeze_timer = 0.0
+	_restore_material()
+	_update_aura()
+
+func _restore_material() -> void:
+	if _mesh_instance and _mesh_instance.material_override is StandardMaterial3D:
+		_mesh_instance.material_override.albedo_color = ball_color
+		_mesh_instance.material_override.roughness = 0.3
+		_mesh_instance.material_override.metallic = 0.2
+		_mesh_instance.material_override.emission_enabled = false
+
+func _setup_aura() -> void:
+	if not has_node("AuraRing"):
+		_aura_ring = MeshInstance3D.new()
+		_aura_ring.name = "AuraRing"
+		var torus = TorusMesh.new()
+		torus.inner_radius = CageConfig.PLAYER_RADIUS * 1.08
+		torus.outer_radius = CageConfig.PLAYER_RADIUS * 1.28
+		_aura_ring.mesh = torus
+		var mat = StandardMaterial3D.new()
+		mat.albedo_color = Color.WHITE
+		mat.emission_enabled = true
+		mat.emission = Color.WHITE
+		mat.emission_energy_multiplier = 2.0
+		_aura_ring.material_override = mat
+		_aura_ring.position = Vector3(0, -0.2, 0)
+		_aura_ring.visible = false
+		add_child(_aura_ring)
+
+func _update_aura() -> void:
+	if not _aura_ring:
+		return
+	if is_frozen:
+		_aura_ring.visible = true
+		_set_aura_color(Color(0.2, 0.85, 1.0))
+	elif has_super_shot:
+		_aura_ring.visible = true
+		_set_aura_color(Color(1.0, 0.35, 0.05))
+	elif speed_boost_timer > 0.0:
+		_aura_ring.visible = true
+		_set_aura_color(Color(1.0, 0.88, 0.15))
+	elif magnet_timer > 0.0:
+		_aura_ring.visible = true
+		_set_aura_color(Color(0.85, 0.18, 0.95))
+	elif freeze_tackle_ready:
+		_aura_ring.visible = true
+		_set_aura_color(Color(0.2, 0.85, 1.0))
+	else:
+		_aura_ring.visible = false
+
+func _set_aura_color(col: Color) -> void:
+	if _aura_ring and _aura_ring.material_override is StandardMaterial3D:
+		_aura_ring.material_override.emission = col
+		_aura_ring.material_override.albedo_color = col
 
 func reset_to(pos: Vector3) -> void:
 	_teleport_target = pos
@@ -348,3 +537,12 @@ func reset_to(pos: Vector3) -> void:
 	_stuck_timer = 0.0
 	_unstuck_mode_timer = 0.0
 	_unstuck_dir = Vector3.ZERO
+	
+	active_power_up = CageConfig.PowerUpType.NONE
+	speed_boost_timer = 0.0
+	magnet_timer = 0.0
+	freeze_tackle_ready = false
+	has_super_shot = false
+	unfreeze_player()
+	_update_aura()
+
