@@ -288,7 +288,11 @@ func _test_main_scene() -> bool:
 	assert(not str(main_scene.ui_lobby_slot_team_btns[0].focus_neighbor_bottom).is_empty(), "Slot team button must route downwards")
 
 	# Lobby Buttons Interaktivität prüfen (Gamepad A / Click)
+	assert(main_scene.player3.control_type == CagePlayer.ControlType.AI_BOT, "P3 should default to AI_BOT for 2v2")
+	assert(main_scene.player4.control_type == CagePlayer.ControlType.AI_BOT, "P4 should default to AI_BOT for 2v2")
 	main_scene.ui_lobby_slot_ctrl_btns[2].pressed.emit() # P3 Slot Control
+	assert(main_scene.player3.control_type == CagePlayer.ControlType.OFF, "P3 should cycle to OFF via button click from default AI_BOT")
+	main_scene.ui_lobby_slot_ctrl_btns[2].pressed.emit() # P3 Slot Control again
 	assert(main_scene.player3.control_type == CagePlayer.ControlType.HUMAN_KB1, "P3 should cycle to HUMAN_KB1 via button click")
 	main_scene.ui_lobby_slot_team_btns[2].pressed.emit() # P3 Team
 	assert(main_scene.player3.team_id == 2, "P3 should toggle to Team 2 via button click")

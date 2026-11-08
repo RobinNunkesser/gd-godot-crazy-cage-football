@@ -269,8 +269,8 @@ func _build_scene() -> void:
 	var p_configs = [
 		{"id": 1, "team": 1, "name": "Player1_Red", "color": Color(0.95, 0.2, 0.2), "pos": Vector3(-6.0, CageConfig.PLAYER_RADIUS, -2.2), "ctrl": CagePlayer.ControlType.HUMAN_KB1},
 		{"id": 2, "team": 2, "name": "Player2_Blue", "color": Color(0.2, 0.55, 0.95), "pos": Vector3(6.0, CageConfig.PLAYER_RADIUS, 2.2), "ctrl": CagePlayer.ControlType.AI_BOT},
-		{"id": 3, "team": 1, "name": "Player3_Red", "color": Color(1.0, 0.5, 0.15), "pos": Vector3(-6.0, CageConfig.PLAYER_RADIUS, 2.2), "ctrl": CagePlayer.ControlType.OFF},
-		{"id": 4, "team": 2, "name": "Player4_Blue", "color": Color(0.2, 0.85, 0.95), "pos": Vector3(6.0, CageConfig.PLAYER_RADIUS, -2.2), "ctrl": CagePlayer.ControlType.OFF}
+		{"id": 3, "team": 1, "name": "Player3_Red", "color": Color(1.0, 0.5, 0.15), "pos": Vector3(-6.0, CageConfig.PLAYER_RADIUS, 2.2), "ctrl": CagePlayer.ControlType.AI_BOT},
+		{"id": 4, "team": 2, "name": "Player4_Blue", "color": Color(0.2, 0.85, 0.95), "pos": Vector3(6.0, CageConfig.PLAYER_RADIUS, -2.2), "ctrl": CagePlayer.ControlType.AI_BOT}
 	]
 	
 	players.clear()
