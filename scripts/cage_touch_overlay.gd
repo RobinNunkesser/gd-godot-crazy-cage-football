@@ -331,6 +331,10 @@ func _update_joystick_from_local(local_pos: Vector2) -> void:
 
 func _input(event: InputEvent) -> void:
 	if not is_touch_active:
+		# Auf Desktop-PCs (macOS/Windows/Linux) niemals automatisch per Mausklick/Trackpad aktivieren.
+		# Auf nativen Mobilgeräten (iOS/Android) ist is_touch_active bereits via _detect_touch_device() true.
+		if not OS.has_feature("mobile") and not OS.has_feature("android") and not OS.has_feature("ios") and not OS.has_feature("web"):
+			return
 		if event is InputEventScreenTouch and event.pressed:
 			is_touch_active = true
 			_update_visibility()

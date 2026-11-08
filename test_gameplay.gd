@@ -281,6 +281,10 @@ func _test_main_scene() -> bool:
 	assert(main_scene.ui_lobby_powerup_btn != null, "Lobby powerup button must exist")
 	assert(main_scene.ui_lobby_slot_team_btns.size() == 4, "Must have 4 slot team buttons")
 	assert(main_scene.ui_lobby_slot_ctrl_btns.size() == 4, "Must have 4 slot control buttons")
+	assert(not main_scene._is_touch_or_mobile(), "Desktop should not be recognized as touch/mobile by default")
+	assert(not main_scene.touch_overlay.is_touch_active, "Touch overlay must be inactive on desktop by default")
+	assert(not main_scene.ui_hud_pause_btn.visible, "HUD pause button should be hidden in lobby")
+	assert(main_scene.ui_hint_label.visible, "Desktop keyboard hint must be visible in lobby")
 	
 	# Focus Neighbor Routing im Hauptmenü prüfen
 	assert(not str(main_scene.ui_lobby_start_btn.focus_neighbor_top).is_empty(), "Start button must have top focus neighbor")

@@ -152,7 +152,7 @@ func _is_touch_or_mobile() -> bool:
 		return true
 	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
 		return true
-	if DisplayServer.is_touchscreen_available():
+	if OS.has_feature("web_android") or OS.has_feature("web_ios"):
 		return true
 	return false
 
@@ -757,6 +757,7 @@ func _build_ui() -> void:
 	ui_hud_pause_btn.size = Vector2(52, 42)
 	ui_hud_pause_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	ui_hud_pause_btn.pressed.connect(toggle_pause)
+	ui_hud_pause_btn.visible = false
 	ui_hud_container.add_child(ui_hud_pause_btn)
 	
 	# --- Pre-Match Lobby Panel ---
@@ -1975,6 +1976,13 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_language()
 			elif event.keycode == KEY_F11:
 				toggle_fullscreen()
+			elif event.keycode == KEY_O:
+				if touch_overlay:
+					var active = touch_overlay.toggle_touch_overlay()
+					if ui_banner_label:
+						ui_banner_label.visible = true
+						ui_banner_label.text = "TOUCH CONTROLS: ON" if active else "TOUCH CONTROLS: OFF"
+					_update_lobby_ui()
 			elif event.keycode == KEY_SPACE or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
 				start_match_from_lobby()
 		else:
@@ -1988,6 +1996,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					if ui_banner_label:
 						ui_banner_label.visible = true
 						ui_banner_label.text = "TOUCH CONTROLS: ON" if active else "TOUCH CONTROLS: OFF"
+					if is_instance_valid(ui_hud_pause_btn):
+						ui_hud_pause_btn.visible = !active
 
 func toggle_bgm_music() -> void:
 	if sound_manager:
