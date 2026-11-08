@@ -69,13 +69,25 @@ Aus der Sammlung *"5 Chiptunes (Action)"* von **Juhani Junkala (SubspaceAudio)**
 
 ---
 
-## 🚀 Export & GitHub Release (v0.2.3)
+## 🚀 Export & GitHub Release (v0.2.5)
 
 Automatisierte Multiplattform-Builds werden per GitHub Actions (`.github/workflows/export.yml`) bei jedem Git-Tag `v*` erstellt:
 - **Windows Desktop:** `CrazyCageFootball-Windows.zip` (`.exe`)
 - **Linux:** `CrazyCageFootball-Linux.zip` (`.x86_64`)
 - **macOS:** `CrazyCageFootball-macOS.zip` (`.app`)
 - **Web (HTML5):** `CrazyCageFootball-Web.zip` (`index.html`)
+- **iOS / iPadOS:** Natives Xcode-Projekt via Export-Preset `iOS` (`builds/ios/CrazyCageFootball.xcodeproj`)
+
+---
+
+## 🎮 Multi-Controller & iPad Tabletop Multiplayer (`MultiplayerInput`)
+
+Crazy Cage Football integriert das wiederverwendbare Paket `godot-multiplayer-input` (`res://addons/multiplayer_input/`):
+- **Dynamisches Slot-Routing:** Automatische Zuweisung von bis zu 4 Controllern an Spieler 1 bis 4.
+- **Controller Hotplugging:** Reibungsloses An- und Abkoppeln von Bluetooth-Gamepads zur Laufzeit.
+- **iPadOS Couch-/Tabletop-Multiplayer:** Unterstützt bis zu 4 native Bluetooth-Controller (DualSense, Xbox, Switch Pro, MFi) direkt am iPad.
+- **D-Pad-Synthese & Deadzone-Filterung:** Analoge Sticks und digitale Steuerkreuze werden harmonisiert.
+- **Touch-Koexistenz:** Das mobile Touch-Overlay (`cage_touch_overlay.gd`) bleibt für Einzelspieler am iPad-Touchscreen parallel aktiv.
 
 ---
 

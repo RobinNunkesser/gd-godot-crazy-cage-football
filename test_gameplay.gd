@@ -11,6 +11,8 @@ const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CageThemeManager = preload("res://scripts/cage_theme_manager.gd")
 const CageMatchStats = preload("res://scripts/match_stats.gd")
 const CageTouchOverlay = preload("res://scripts/cage_touch_overlay.gd")
+const MultiplayerInputManager = preload("res://addons/multiplayer_input/multiplayer_input_manager.gd")
+const PlayerInputSlot = preload("res://addons/multiplayer_input/player_slot.gd")
 
 func _init() -> void:
 	print("\n--- Running Headless Godot 4 Unit & Gameplay Tests for Crazy Cage Football ---")
@@ -29,6 +31,7 @@ func _init() -> void:
 	success = success and _test_match_stats()
 	success = success and _test_pause_and_options()
 	success = success and _test_touch_overlay()
+	success = success and _test_multiplayer_input()
 	
 	if success:
 		print("=== ALL TESTS FOR CRAZY CAGE FOOTBALL PASSED SUCCESSFULLY! ===\n")
@@ -655,4 +658,28 @@ func _test_touch_overlay() -> bool:
 	overlay.queue_free()
 	print("  -> CageTouchOverlay tablet virtual joystick & arcade buttons OK.")
 	return true
+
+func _test_multiplayer_input() -> bool:
+	print("[14/14] Testing MultiplayerInputManager local slots & controller integration...")
+	var mp = MultiplayerInputManager.new()
+	root.add_child(mp)
+	mp._ready()
+	
+	assert(mp.slots.size() == 4, "MultiplayerInput should manage 4 slots")
+	assert(mp.slots[0].device_type == PlayerInputSlot.DeviceType.KEYBOARD_WASD, "Slot 0 should default to WASD")
+	assert(mp.slots[1].device_type == PlayerInputSlot.DeviceType.KEYBOARD_ARROWS, "Slot 1 should default to Arrows")
+	
+	# Manual Joypad Assignment Test
+	mp.assign_joypad(0, 0)
+	assert(mp.slots[0].device_type == PlayerInputSlot.DeviceType.JOYPAD, "Slot 0 should now be JOYPAD")
+	assert(mp.slots[0].joypad_id == 0, "Joypad ID should be 0")
+	
+	# Action alias check
+	assert(mp.get_slot(0)._check_action("jump", 0) == false, "Jump should evaluate safely")
+	assert(mp.get_slot(0)._check_action("boost", 0) == false, "Boost should evaluate safely")
+	
+	mp.queue_free()
+	print("  -> MultiplayerInputManager & slot routing OK.")
+	return true
+
 

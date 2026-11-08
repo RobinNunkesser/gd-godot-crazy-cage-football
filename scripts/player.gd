@@ -5,6 +5,7 @@ const CageConfig = preload("res://scripts/config.gd")
 const CageSoundManager = preload("res://scripts/cage_sound_manager.gd")
 const CageJuiceManager = preload("res://scripts/cage_juice_manager.gd")
 const CagePowerUp = preload("res://scripts/power_up.gd")
+const PlayerInputSlot = preload("res://addons/multiplayer_input/player_slot.gd")
 
 signal jumped(player: CagePlayer)
 signal tackled(player: CagePlayer)
@@ -364,42 +365,75 @@ func _handle_input(_delta: float) -> void:
 	var input_vec = Vector2.ZERO
 	var jump_pressed = false
 	var boost_pressed = false
+	var slot_idx = player_id - 1
+	var mp_input = get_node_or_null("/root/MultiplayerInput")
 	
 	match control_type:
 		ControlType.HUMAN_KB1:
-			if Input.is_action_pressed("p1_left") or Input.is_key_pressed(KEY_A):
-				input_vec.x -= 1.0
-			if Input.is_action_pressed("p1_right") or Input.is_key_pressed(KEY_D):
-				input_vec.x += 1.0
-			if Input.is_action_pressed("p1_up") or Input.is_key_pressed(KEY_W):
-				input_vec.y -= 1.0
-			if Input.is_action_pressed("p1_down") or Input.is_key_pressed(KEY_S):
-				input_vec.y += 1.0
-			jump_pressed = Input.is_action_just_pressed("p1_jump") or Input.is_key_pressed(KEY_SPACE)
-			boost_pressed = Input.is_action_just_pressed("p1_boost") or Input.is_key_pressed(KEY_SHIFT)
+			if mp_input:
+				input_vec = mp_input.get_move_vector(slot_idx)
+				jump_pressed = mp_input.is_action_just_pressed(slot_idx, "jump")
+				boost_pressed = mp_input.is_action_just_pressed(slot_idx, "boost")
+			
+			if input_vec == Vector2.ZERO:
+				if Input.is_action_pressed("p1_left") or Input.is_key_pressed(KEY_A):
+					input_vec.x -= 1.0
+				if Input.is_action_pressed("p1_right") or Input.is_key_pressed(KEY_D):
+					input_vec.x += 1.0
+				if Input.is_action_pressed("p1_up") or Input.is_key_pressed(KEY_W):
+					input_vec.y -= 1.0
+				if Input.is_action_pressed("p1_down") or Input.is_key_pressed(KEY_S):
+					input_vec.y += 1.0
+			if not jump_pressed:
+				jump_pressed = Input.is_action_just_pressed("p1_jump") or Input.is_key_pressed(KEY_SPACE)
+			if not boost_pressed:
+				boost_pressed = Input.is_action_just_pressed("p1_boost") or Input.is_key_pressed(KEY_SHIFT)
 			
 		ControlType.HUMAN_KB2:
-			if Input.is_action_pressed("p2_left") or Input.is_key_pressed(KEY_LEFT):
-				input_vec.x -= 1.0
-			if Input.is_action_pressed("p2_right") or Input.is_key_pressed(KEY_RIGHT):
-				input_vec.x += 1.0
-			if Input.is_action_pressed("p2_up") or Input.is_key_pressed(KEY_UP):
-				input_vec.y -= 1.0
-			if Input.is_action_pressed("p2_down") or Input.is_key_pressed(KEY_DOWN):
-				input_vec.y += 1.0
-			jump_pressed = Input.is_action_just_pressed("p2_jump") or Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_KP_ENTER)
-			boost_pressed = Input.is_action_just_pressed("p2_boost") or Input.is_key_pressed(KEY_CTRL)
+			if mp_input:
+				input_vec = mp_input.get_move_vector(slot_idx)
+				jump_pressed = mp_input.is_action_just_pressed(slot_idx, "jump")
+				boost_pressed = mp_input.is_action_just_pressed(slot_idx, "boost")
+				
+			if input_vec == Vector2.ZERO:
+				if Input.is_action_pressed("p2_left") or Input.is_key_pressed(KEY_LEFT):
+					input_vec.x -= 1.0
+				if Input.is_action_pressed("p2_right") or Input.is_key_pressed(KEY_RIGHT):
+					input_vec.x += 1.0
+				if Input.is_action_pressed("p2_up") or Input.is_key_pressed(KEY_UP):
+					input_vec.y -= 1.0
+				if Input.is_action_pressed("p2_down") or Input.is_key_pressed(KEY_DOWN):
+					input_vec.y += 1.0
+			if not jump_pressed:
+				jump_pressed = Input.is_action_just_pressed("p2_jump") or Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_KP_ENTER)
+			if not boost_pressed:
+				boost_pressed = Input.is_action_just_pressed("p2_boost") or Input.is_key_pressed(KEY_CTRL)
 			
 		ControlType.GAMEPAD_0, ControlType.GAMEPAD_1, ControlType.GAMEPAD_2, ControlType.GAMEPAD_3:
 			var dev = int(control_type) - int(ControlType.GAMEPAD_0)
-			var raw_x = Input.get_joy_axis(dev, JOY_AXIS_LEFT_X)
-			var raw_y = Input.get_joy_axis(dev, JOY_AXIS_LEFT_Y)
-			if absf(raw_x) > 0.2:
-				input_vec.x = raw_x
-			if absf(raw_y) > 0.2:
-				input_vec.y = raw_y
-			jump_pressed = Input.is_joy_button_pressed(dev, JOY_BUTTON_A)
-			boost_pressed = Input.is_joy_button_pressed(dev, JOY_BUTTON_B) or Input.is_joy_button_pressed(dev, JOY_BUTTON_RIGHT_SHOULDER)
+			if mp_input:
+				var slot = mp_input.get_slot(slot_idx)
+				if slot and slot.device_type == PlayerInputSlot.DeviceType.JOYPAD and slot.joypad_id == dev:
+					input_vec = slot.get_move_vector()
+					jump_pressed = slot.is_action_just_pressed("jump")
+					boost_pressed = slot.is_action_just_pressed("boost")
+			
+			if input_vec == Vector2.ZERO:
+				var raw_x = Input.get_joy_axis(dev, JOY_AXIS_LEFT_X)
+				var raw_y = Input.get_joy_axis(dev, JOY_AXIS_LEFT_Y)
+				if absf(raw_x) > 0.2:
+					input_vec.x = raw_x
+				if absf(raw_y) > 0.2:
+					input_vec.y = raw_y
+				if input_vec == Vector2.ZERO:
+					if Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_LEFT): input_vec.x -= 1.0
+					if Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_RIGHT): input_vec.x += 1.0
+					if Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_UP): input_vec.y -= 1.0
+					if Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_DOWN): input_vec.y += 1.0
+			if not jump_pressed:
+				jump_pressed = Input.is_joy_button_pressed(dev, JOY_BUTTON_A)
+			if not boost_pressed:
+				boost_pressed = Input.is_joy_button_pressed(dev, JOY_BUTTON_B) or Input.is_joy_button_pressed(dev, JOY_BUTTON_RIGHT_SHOULDER)
 	
 	if input_vec.length_squared() > 0.01:
 		input_vec = input_vec.normalized()
