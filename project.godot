@@ -1,31 +1,25 @@
 ; Engine configuration file.
-; Crazy Cage Football (Godot 4 3D)
-; Phase 1: Scaffolding & Core Loop
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
 [application]
 
 config/name="Crazy Cage Football"
-config/version="0.2.5"
 config/description="3D Physics Cage Soccer Game in Godot 4 inspired by Zippir: Kafes Futbolu. Roll, jump (Ziplama) and score bank-shot goals!"
+config/version="0.2.5"
 run/main_scene="res://scenes/main.tscn"
-config/icon="res://assets/icon.png"
 config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://assets/icon.png"
 
 [autoload]
 
-MultiplayerInput="*res://addons/multiplayer_input/multiplayer_input_manager.gd"
-
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/multiplayer_input/plugin.cfg")
-
-[locale]
-
-translations=PackedStringArray("res://i18n/translations.de.translation", "res://i18n/translations.en.translation")
-locale/test="de"
-locale/fallback="en"
+MultiplayerInput="*uid://b5lu12lk4qjos"
 
 [display]
 
@@ -35,73 +29,96 @@ window/size/mode=3
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
-[rendering]
+[editor_plugins]
 
-textures/vram_compression/import_etc2_astc=true
-renderer/rendering_method.web="gl_compatibility"
-
-[input_devices]
-
-pointing/emulate_touch_from_mouse=true
-pointing/emulate_mouse_from_touch=true
+enabled=PackedStringArray("res://addons/multiplayer_input/plugin.cfg")
 
 [input]
 
 p1_left={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":65)] ; A
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":65,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p1_right={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":68)] ; D
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":68,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p1_up={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":87)] ; W
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":87,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p1_down={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":83)] ; S
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":83,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p1_jump={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":32), Object(InputEventKey,"keycode":81)] ; Space or Q (Ziplama)
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":32,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":81,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p1_boost={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":4194325)] ; Left Shift
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194325,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
-
 p2_left={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":4194319)] ; Left Arrow
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194319,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p2_right={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":4194321)] ; Right Arrow
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194321,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p2_up={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":4194320)] ; Up Arrow
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194320,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p2_down={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":4194322)] ; Down Arrow
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194322,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p2_jump={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":4194309), Object(InputEventKey,"keycode":4194326)] ; Enter or Right Shift
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194309,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194326,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 p2_boost={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":4194327)] ; Right Ctrl
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194327,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
-
 pause={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":80)] ; P
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":80,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 restart={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"keycode":82)] ; R
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":82,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[locale]
+
+translations=PackedStringArray("res://i18n/translations.de.translation", "res://i18n/translations.en.translation")
+locale/test="de"
+locale/fallback="en"
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
+renderer/rendering_method.web="gl_compatibility"
