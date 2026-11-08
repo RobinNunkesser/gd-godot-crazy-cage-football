@@ -552,8 +552,17 @@ func _test_pause_and_options() -> bool:
 	assert(main_scene.ui_sfx_slider != null, "SFX slider should exist")
 	assert(main_scene.ui_pause_focus_btn != null, "Pause focus button should exist")
 	assert(main_scene.ui_pause_resume_btn != null, "Pause resume button should exist")
+	assert(main_scene.ui_pause_powerup_btn != null, "Pause powerup toggle button should exist")
+	assert(main_scene.ui_hud_pause_btn != null, "HUD Pause button should exist")
 	assert(main_scene.ui_master_slider.focus_neighbor_bottom == NodePath("../BgmSlider"), "Master slider should route down to BGM slider")
 	assert(main_scene.ui_pause_resume_btn.focus_neighbor_bottom == NodePath("../FocusBtn"), "Resume button should route down to Focus button")
+	
+	# Test toggling powerups from pause menu
+	var initial_powerups = CageConfig.powerups_enabled
+	main_scene.ui_pause_powerup_btn.pressed.emit()
+	assert(CageConfig.powerups_enabled != initial_powerups, "Clicking pause powerup button should toggle powerups")
+	main_scene.ui_pause_powerup_btn.pressed.emit()
+	assert(CageConfig.powerups_enabled == initial_powerups, "Second click should restore initial powerup state")
 	
 	main_scene.cycle_gameplay_focus()
 	assert(main_scene.camera.focus_mode == CageCamera.FocusMode.BALL_CAM, "cycle_gameplay_focus should advance focus mode")

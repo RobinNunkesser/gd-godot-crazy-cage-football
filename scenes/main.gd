@@ -66,6 +66,7 @@ var ui_powerup_desc: Label
 var ui_title_label: Label
 var ui_subtitle_label: Label
 var ui_hint_label: Label
+var ui_hud_pause_btn: Button
 var ui_card_slot_titles: Array[Label] = []
 var ui_key_hint_labels: Array[Label] = []
 var ui_lobby_slot_ctrl_btns: Array[Button] = []
@@ -92,6 +93,7 @@ var ui_pause_focus_btn: Button
 var ui_pause_theme_btn: Button
 var ui_pause_lang_btn: Button
 var ui_pause_fs_btn: Button
+var ui_pause_powerup_btn: Button
 var ui_pause_lobby_btn: Button
 var ui_pause_ctrl_title_lbl: Label
 var ui_pause_ctrl_p1_lbl: Label
@@ -144,6 +146,15 @@ func _init_translations() -> void:
 			var t = load(path)
 			if t is Translation:
 				TranslationServer.add_translation(t)
+
+func _is_touch_or_mobile() -> bool:
+	if touch_overlay and touch_overlay.is_touch_active:
+		return true
+	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
+		return true
+	if DisplayServer.is_touchscreen_available():
+		return true
+	return false
 
 func _build_audio() -> void:
 	sound_manager = CageSoundManager.new()
@@ -737,7 +748,16 @@ func _build_ui() -> void:
 	ui_hint_label.position = Vector2(40, 670)
 	ui_hint_label.add_theme_font_size_override("font_size", 16)
 	ui_hint_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 0.8))
+	ui_hint_label.visible = !_is_touch_or_mobile()
 	ui_hud_container.add_child(ui_hint_label)
+	
+	ui_hud_pause_btn = _create_styled_button("⏸", 18, Color(0.12, 0.18, 0.28, 0.85))
+	ui_hud_pause_btn.name = "HudPauseBtn"
+	ui_hud_pause_btn.position = Vector2(1208, 16)
+	ui_hud_pause_btn.size = Vector2(52, 42)
+	ui_hud_pause_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	ui_hud_pause_btn.pressed.connect(toggle_pause)
+	ui_hud_container.add_child(ui_hud_pause_btn)
 	
 	# --- Pre-Match Lobby Panel ---
 	ui_lobby_panel = Control.new()
@@ -852,6 +872,7 @@ func _build_ui() -> void:
 		key_hint.size = Vector2(col_width - 20, 64)
 		key_hint.add_theme_font_size_override("font_size", 13)
 		key_hint.add_theme_color_override("font_color", Color(0.70, 0.75, 0.85))
+		key_hint.visible = !_is_touch_or_mobile()
 		card.add_child(key_hint)
 		ui_key_hint_labels.append(key_hint)
 	
@@ -863,7 +884,7 @@ func _build_ui() -> void:
 	ui_powerup_toggle_label.visible = false
 	ui_lobby_panel.add_child(ui_powerup_toggle_label)
 	
-	ui_lobby_theme_btn = _create_styled_button("[T] ARENA", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_theme_btn = _create_styled_button("ARENA", 16, Color(0.15, 0.20, 0.28, 0.95))
 	ui_lobby_theme_btn.name = "LobbyThemeBtn"
 	ui_lobby_theme_btn.position = Vector2(72, 478)
 	ui_lobby_theme_btn.size = Vector2(360, 44)
@@ -872,7 +893,7 @@ func _build_ui() -> void:
 	)
 	ui_lobby_panel.add_child(ui_lobby_theme_btn)
 	
-	ui_lobby_powerup_btn = _create_styled_button("[P] POWER-UPS", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_powerup_btn = _create_styled_button("POWER-UPS", 16, Color(0.15, 0.20, 0.28, 0.95))
 	ui_lobby_powerup_btn.name = "LobbyPowerupBtn"
 	ui_lobby_powerup_btn.position = Vector2(460, 478)
 	ui_lobby_powerup_btn.size = Vector2(360, 44)
@@ -881,7 +902,7 @@ func _build_ui() -> void:
 	)
 	ui_lobby_panel.add_child(ui_lobby_powerup_btn)
 	
-	ui_lobby_focus_btn = _create_styled_button("[F] KAMERA-FOKUS", 16, Color(0.15, 0.20, 0.28, 0.95))
+	ui_lobby_focus_btn = _create_styled_button("KAMERA", 16, Color(0.15, 0.20, 0.28, 0.95))
 	ui_lobby_focus_btn.name = "LobbyFocusBtn"
 	ui_lobby_focus_btn.position = Vector2(848, 478)
 	ui_lobby_focus_btn.size = Vector2(360, 44)
@@ -1099,7 +1120,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	)
 	panel.add_child(ui_pause_restart_btn)
 	
-	ui_pause_focus_btn = _create_styled_button("📷 [F] FOKUS", 16, Color(0.12, 0.22, 0.32, 0.95))
+	ui_pause_focus_btn = _create_styled_button("📷 FOKUS", 16, Color(0.12, 0.22, 0.32, 0.95))
 	ui_pause_focus_btn.position = Vector2(40, btn_y + 46)
 	ui_pause_focus_btn.size = Vector2(bw, bh)
 	ui_pause_focus_btn.pressed.connect(func():
@@ -1107,7 +1128,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	)
 	panel.add_child(ui_pause_focus_btn)
 	
-	ui_pause_theme_btn = _create_styled_button("🏟️ [T] ARENA", 16)
+	ui_pause_theme_btn = _create_styled_button("🏟️ ARENA", 16)
 	ui_pause_theme_btn.position = Vector2(350, btn_y + 46)
 	ui_pause_theme_btn.size = Vector2(bw, bh)
 	ui_pause_theme_btn.pressed.connect(func():
@@ -1116,7 +1137,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	)
 	panel.add_child(ui_pause_theme_btn)
 	
-	ui_pause_lang_btn = _create_styled_button("🌐 [L] DE / EN", 16)
+	ui_pause_lang_btn = _create_styled_button("🌐 DE / EN", 16)
 	ui_pause_lang_btn.position = Vector2(40, btn_y + 92)
 	ui_pause_lang_btn.size = Vector2(bw, bh)
 	ui_pause_lang_btn.pressed.connect(func():
@@ -1125,7 +1146,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 	)
 	panel.add_child(ui_pause_lang_btn)
 	
-	ui_pause_fs_btn = _create_styled_button("🖥️ [F11] VOLLBILD", 16)
+	ui_pause_fs_btn = _create_styled_button("🖥️ VOLLBILD", 16)
 	ui_pause_fs_btn.position = Vector2(350, btn_y + 92)
 	ui_pause_fs_btn.size = Vector2(bw, bh)
 	ui_pause_fs_btn.pressed.connect(func():
@@ -1133,10 +1154,19 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 		_update_pause_buttons_text()
 	)
 	panel.add_child(ui_pause_fs_btn)
+
+	ui_pause_powerup_btn = _create_styled_button("⚡ POWER-UPS", 16, Color(0.18, 0.16, 0.28, 0.95))
+	ui_pause_powerup_btn.position = Vector2(40, btn_y + 138)
+	ui_pause_powerup_btn.size = Vector2(bw, bh)
+	ui_pause_powerup_btn.pressed.connect(func():
+		toggle_powerups()
+		_update_pause_buttons_text()
+	)
+	panel.add_child(ui_pause_powerup_btn)
 	
 	ui_pause_lobby_btn = _create_styled_button(tr("PAUSE_LOBBY"), 16, Color(0.25, 0.10, 0.10, 0.95))
-	ui_pause_lobby_btn.position = Vector2(160, btn_y + 138)
-	ui_pause_lobby_btn.size = Vector2(360, bh)
+	ui_pause_lobby_btn.position = Vector2(350, btn_y + 138)
+	ui_pause_lobby_btn.size = Vector2(bw, bh)
 	ui_pause_lobby_btn.pressed.connect(func():
 		toggle_pause()
 		return_to_lobby()
@@ -1359,6 +1389,8 @@ func _setup_focus_routing() -> void:
 		ui_pause_lang_btn.name = "LangBtn"
 	if is_instance_valid(ui_pause_fs_btn):
 		ui_pause_fs_btn.name = "FsBtn"
+	if is_instance_valid(ui_pause_powerup_btn):
+		ui_pause_powerup_btn.name = "PowerupBtn"
 	if is_instance_valid(ui_pause_lobby_btn):
 		ui_pause_lobby_btn.name = "LobbyBtn"
 
@@ -1393,7 +1425,7 @@ func _setup_focus_routing() -> void:
 		ui_pause_theme_btn.focus_neighbor_right = NodePath("../FocusBtn")
 		
 		ui_pause_lang_btn.focus_neighbor_top = NodePath("../FocusBtn")
-		ui_pause_lang_btn.focus_neighbor_bottom = NodePath("../LobbyBtn")
+		ui_pause_lang_btn.focus_neighbor_bottom = NodePath("../PowerupBtn")
 		ui_pause_lang_btn.focus_neighbor_right = NodePath("../FsBtn")
 		ui_pause_lang_btn.focus_neighbor_left = NodePath("../FsBtn")
 		
@@ -1402,8 +1434,16 @@ func _setup_focus_routing() -> void:
 		ui_pause_fs_btn.focus_neighbor_left = NodePath("../LangBtn")
 		ui_pause_fs_btn.focus_neighbor_right = NodePath("../LangBtn")
 		
-		ui_pause_lobby_btn.focus_neighbor_top = NodePath("../LangBtn")
+		if is_instance_valid(ui_pause_powerup_btn):
+			ui_pause_powerup_btn.focus_neighbor_top = NodePath("../LangBtn")
+			ui_pause_powerup_btn.focus_neighbor_bottom = NodePath("../MasterSlider")
+			ui_pause_powerup_btn.focus_neighbor_left = NodePath("../LobbyBtn")
+			ui_pause_powerup_btn.focus_neighbor_right = NodePath("../LobbyBtn")
+
+		ui_pause_lobby_btn.focus_neighbor_top = NodePath("../FsBtn")
 		ui_pause_lobby_btn.focus_neighbor_bottom = NodePath("../MasterSlider")
+		ui_pause_lobby_btn.focus_neighbor_left = NodePath("../PowerupBtn")
+		ui_pause_lobby_btn.focus_neighbor_right = NodePath("../PowerupBtn")
 
 	if is_instance_valid(ui_stats_rematch_btn) and is_instance_valid(ui_stats_lobby_btn):
 		ui_stats_rematch_btn.name = "RematchBtn"
@@ -1480,22 +1520,25 @@ func _update_volume_labels() -> void:
 
 func _update_pause_buttons_text() -> void:
 	if ui_pause_resume_btn:
-		ui_pause_resume_btn.text = tr("PAUSE_RESUME")
+		ui_pause_resume_btn.text = "▶️ " + tr("PAUSE_RESUME")
 	if ui_pause_restart_btn:
-		ui_pause_restart_btn.text = tr("PAUSE_RESTART")
+		ui_pause_restart_btn.text = "🔄 " + tr("PAUSE_RESTART")
 	if ui_pause_lobby_btn:
-		ui_pause_lobby_btn.text = tr("PAUSE_LOBBY")
+		ui_pause_lobby_btn.text = "🏠 " + tr("PAUSE_LOBBY")
+	if ui_pause_powerup_btn:
+		var p_status = tr("STATUS_ENABLED") if CageConfig.powerups_enabled else tr("STATUS_DISABLED")
+		ui_pause_powerup_btn.text = "⚡ POWER-UPS: " + p_status
 	if ui_pause_theme_btn and theme_manager:
 		var cur = theme_manager.get_current_theme()
 		var dname = theme_manager.get_theme_display_name(cur)
-		ui_pause_theme_btn.text = "🏟️ [T] " + dname
+		ui_pause_theme_btn.text = "🏟️ ARENA: " + dname
 	if ui_pause_lang_btn:
 		var cur_loc = TranslationServer.get_locale().to_upper()
-		ui_pause_lang_btn.text = "🌐 [L] " + cur_loc
+		ui_pause_lang_btn.text = "🌐 SPRACHE: " + cur_loc
 	if ui_pause_fs_btn:
 		var mode = DisplayServer.window_get_mode()
 		var is_fs = (mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
-		ui_pause_fs_btn.text = "🖥️ [F11] " + (tr("FULLSCREEN_ON") if is_fs else tr("FULLSCREEN_OFF"))
+		ui_pause_fs_btn.text = "🖥️ VOLLBILD: " + (tr("STATUS_ENABLED") if is_fs else tr("STATUS_DISABLED"))
 	if ui_pause_focus_btn and is_instance_valid(camera):
 		var fname = ""
 		match camera.focus_mode:
@@ -1509,17 +1552,30 @@ func _update_pause_buttons_text() -> void:
 		if "%s" in fmt:
 			ui_pause_focus_btn.text = fmt % fname
 		else:
-			ui_pause_focus_btn.text = "📷 [F] " + fname
+			ui_pause_focus_btn.text = "📷 " + fname
 	if ui_pause_ctrl_title_lbl:
 		ui_pause_ctrl_title_lbl.text = tr("CONTROLS_TITLE")
-	if ui_pause_ctrl_p1_lbl:
-		ui_pause_ctrl_p1_lbl.text = tr("CONTROLS_P1")
-	if ui_pause_ctrl_p2_lbl:
-		ui_pause_ctrl_p2_lbl.text = tr("CONTROLS_P2")
-	if ui_pause_ctrl_gp_lbl:
-		ui_pause_ctrl_gp_lbl.text = tr("CONTROLS_GAMEPAD")
-	if ui_pause_ctrl_focus_lbl:
-		ui_pause_ctrl_focus_lbl.text = "📷 [F] / [Gamepad Y]: " + tr("FOCUS_MODE_DYNAMIC") + " / " + tr("FOCUS_MODE_BALL") + " / " + tr("FOCUS_MODE_BROADCAST")
+	if _is_touch_or_mobile():
+		if ui_pause_ctrl_p1_lbl:
+			ui_pause_ctrl_p1_lbl.text = tr("CONTROLS_TOUCH")
+		if ui_pause_ctrl_p2_lbl:
+			ui_pause_ctrl_p2_lbl.visible = false
+		if ui_pause_ctrl_gp_lbl:
+			ui_pause_ctrl_gp_lbl.text = tr("CONTROLS_GAMEPAD")
+		if ui_pause_ctrl_focus_lbl:
+			ui_pause_ctrl_focus_lbl.visible = false
+	else:
+		if ui_pause_ctrl_p1_lbl:
+			ui_pause_ctrl_p1_lbl.text = tr("CONTROLS_P1")
+			ui_pause_ctrl_p1_lbl.visible = true
+		if ui_pause_ctrl_p2_lbl:
+			ui_pause_ctrl_p2_lbl.text = tr("CONTROLS_P2")
+			ui_pause_ctrl_p2_lbl.visible = true
+		if ui_pause_ctrl_gp_lbl:
+			ui_pause_ctrl_gp_lbl.text = tr("CONTROLS_GAMEPAD")
+			ui_pause_ctrl_gp_lbl.visible = true
+		if ui_pause_ctrl_focus_lbl:
+			ui_pause_ctrl_focus_lbl.visible = false
 	if ui_pause_title_lbl:
 		ui_pause_title_lbl.text = tr("PAUSE_TITLE")
 	if ui_pause_options_title_lbl:
@@ -1562,6 +1618,8 @@ func toggle_pause() -> void:
 			_update_pause_buttons_text()
 			if is_instance_valid(ui_pause_resume_btn) and ui_pause_resume_btn.is_inside_tree():
 				ui_pause_resume_btn.grab_focus()
+	if is_instance_valid(ui_hud_pause_btn):
+		ui_hud_pause_btn.visible = !is_game_paused and !(touch_overlay and touch_overlay.is_touch_active)
 	for p in players:
 		p.freeze = is_game_paused
 	if ball:
@@ -1574,6 +1632,10 @@ func toggle_pause() -> void:
 func show_match_stats() -> void:
 	if not ui_stats_container:
 		return
+	if is_instance_valid(ui_hud_pause_btn):
+		ui_hud_pause_btn.visible = false
+	if is_instance_valid(ui_hint_label):
+		ui_hint_label.visible = false
 	if touch_overlay:
 		touch_overlay.set_gameplay_active(false)
 	
@@ -1654,9 +1716,12 @@ func _refresh_all_localized_text() -> void:
 	if ui_title_label:
 		ui_title_label.text = tr("LOBBY_TITLE")
 	if ui_subtitle_label:
-		ui_subtitle_label.text = tr("LOBBY_SUBTITLE")
+		ui_subtitle_label.text = tr("LOBBY_SUBTITLE_TOUCH") if _is_touch_or_mobile() else tr("LOBBY_SUBTITLE")
 	if ui_hint_label:
+		ui_hint_label.visible = !_is_touch_or_mobile()
 		ui_hint_label.text = tr("UI_HINTS_BAR")
+	if is_instance_valid(ui_hud_pause_btn):
+		ui_hud_pause_btn.visible = (state_manager.current_state != CageStateManager.MatchState.LOBBY) and !is_game_paused and !(touch_overlay and touch_overlay.is_touch_active)
 	var slot_fmt = tr("SLOT_TITLE")
 	if not ("%d" in slot_fmt):
 		slot_fmt = "SLOT %d"
@@ -1667,6 +1732,7 @@ func _refresh_all_localized_text() -> void:
 	if not ("%d" in hint_fmt and "%s" in hint_fmt):
 		hint_fmt = "Taste [%d]: Modus\nTaste [%s]: Team wechseln"
 	for i in range(ui_key_hint_labels.size()):
+		ui_key_hint_labels[i].visible = !_is_touch_or_mobile()
 		ui_key_hint_labels[i].text = hint_fmt % [i + 1, team_keys[i]]
 	_update_lobby_ui()
 	_update_pause_buttons_text()
@@ -1689,26 +1755,22 @@ func _update_lobby_ui() -> void:
 		if i < ui_lobby_slot_team_btns.size():
 			var btn = ui_lobby_slot_team_btns[i]
 			var team_name = tr("TEAM_RED_LBL") if p.team_id == 1 else tr("TEAM_BLUE_LBL")
-			btn.text = ("[ROT] " if p.team_id == 1 else "[BLAU] ") + team_name
+			btn.text = ("🔴 " if p.team_id == 1 else "🔵 ") + team_name
 		if i < ui_lobby_slot_ctrl_btns.size():
 			var c_btn = ui_lobby_slot_ctrl_btns[i]
-			var mode_title = tr("BTN_CHANGE_MODE")
-			if "%s" in mode_title:
-				c_btn.text = "[MODUS] " + (mode_title % ("[%d]" % (i + 1)))
-			else:
-				c_btn.text = "[MODUS] " + mode_title
+			c_btn.text = "🔄 " + tr("BTN_CHANGE_MODE").split(":")[0].strip_edges()
 	
 	if ui_lobby_theme_btn and theme_manager:
 		var cur_theme = theme_manager.get_current_theme()
 		var dname = theme_manager.get_theme_display_name(cur_theme)
 		var btn_fmt = tr("LOBBY_THEME_BTN")
 		if not ("%s" in btn_fmt):
-			btn_fmt = "[T] ARENA: %s"
+			btn_fmt = "🏟️ ARENA: %s"
 		ui_lobby_theme_btn.text = btn_fmt % dname
 	
 	if ui_lobby_powerup_btn:
-		var p_status = tr("POWERUPS_NOW_ON") if CageConfig.powerups_enabled else tr("POWERUPS_NOW_OFF")
-		ui_lobby_powerup_btn.text = "[P] " + p_status
+		var p_status = tr("STATUS_ENABLED") if CageConfig.powerups_enabled else tr("STATUS_DISABLED")
+		ui_lobby_powerup_btn.text = "⚡ POWER-UPS: " + p_status
 		
 	if ui_lobby_focus_btn and is_instance_valid(camera):
 		var fname = ""
@@ -1723,20 +1785,23 @@ func _update_lobby_ui() -> void:
 		if "%s" in fmt:
 			ui_lobby_focus_btn.text = fmt % fname
 		else:
-			ui_lobby_focus_btn.text = "[F] " + fname
+			ui_lobby_focus_btn.text = "📷 " + fname
 			
 	if ui_lobby_start_btn:
 		ui_lobby_start_btn.text = tr("LOBBY_START_BTN")
 		
 	if ui_lobby_gp_hint_lbl:
-		ui_lobby_gp_hint_lbl.text = tr("LOBBY_HINT_GAMEPAD")
+		if _is_touch_or_mobile():
+			ui_lobby_gp_hint_lbl.text = tr("LOBBY_HINT_TOUCH")
+		else:
+			ui_lobby_gp_hint_lbl.text = tr("LOBBY_HINT_GAMEPAD")
 
 	if ui_theme_toggle_label and theme_manager:
 		var cur_theme = theme_manager.get_current_theme()
 		var dname = theme_manager.get_theme_display_name(cur_theme)
 		var btn_fmt = tr("LOBBY_THEME_BTN")
 		if not ("%s" in btn_fmt):
-			btn_fmt = "[T] ARENA: %s"
+			btn_fmt = "🏟️ ARENA: %s"
 		ui_theme_toggle_label.text = btn_fmt % dname
 	
 	if ui_powerup_toggle_label:
@@ -1855,7 +1920,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 
 		if is_game_paused:
-			if event.keycode == KEY_ESCAPE:
+			if event.keycode == KEY_ESCAPE or event.keycode == KEY_P:
 				toggle_pause()
 				return
 			elif event.keycode == KEY_R:
@@ -1881,29 +1946,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				_update_pause_buttons_text()
 				return
 
-		if event.keycode == KEY_M:
-			toggle_bgm_music()
-			return
-		elif event.keycode == KEY_L:
-			toggle_language()
-			return
-		elif event.keycode == KEY_F11:
-			toggle_fullscreen()
-			return
-		elif event.keycode == KEY_F:
-			cycle_gameplay_focus()
-			return
-		elif event.keycode == KEY_T:
-			cycle_arena_theme()
-			return
-		elif event.keycode == KEY_O:
-			if touch_overlay:
-				var active = touch_overlay.toggle_touch_overlay()
-				if ui_banner_label:
-					ui_banner_label.visible = true
-					ui_banner_label.text = "TOUCH CONTROLS: ON" if active else "TOUCH CONTROLS: OFF"
-			return
-			
 		if state_manager.current_state == CageStateManager.MatchState.LOBBY:
 			if event.keycode == KEY_1:
 				cycle_player_slot(0)
@@ -1923,15 +1965,29 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_player_team(3)
 			elif event.keycode == KEY_P:
 				toggle_powerups()
+			elif event.keycode == KEY_T:
+				cycle_arena_theme()
+			elif event.keycode == KEY_F:
+				cycle_gameplay_focus()
+			elif event.keycode == KEY_M:
+				toggle_bgm_music()
+			elif event.keycode == KEY_L:
+				toggle_language()
+			elif event.keycode == KEY_F11:
+				toggle_fullscreen()
 			elif event.keycode == KEY_SPACE or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
 				start_match_from_lobby()
 		else:
-			if event.keycode == KEY_ESCAPE:
+			if event.keycode == KEY_ESCAPE or event.keycode == KEY_P:
 				toggle_pause()
-			elif event.keycode == KEY_B:
-				toggle_p2_bot()
-			elif event.keycode == KEY_P:
-				toggle_powerups()
+			elif event.keycode == KEY_F11:
+				toggle_fullscreen()
+			elif event.keycode == KEY_O:
+				if touch_overlay:
+					var active = touch_overlay.toggle_touch_overlay()
+					if ui_banner_label:
+						ui_banner_label.visible = true
+						ui_banner_label.text = "TOUCH CONTROLS: ON" if active else "TOUCH CONTROLS: OFF"
 
 func toggle_bgm_music() -> void:
 	if sound_manager:
@@ -2238,6 +2294,10 @@ func start_match_from_lobby() -> void:
 	
 	ui_lobby_panel.visible = false
 	ui_hud_container.visible = true
+	if is_instance_valid(ui_hud_pause_btn):
+		ui_hud_pause_btn.visible = !(touch_overlay and touch_overlay.is_touch_active)
+	if is_instance_valid(ui_hint_label):
+		ui_hint_label.visible = !_is_touch_or_mobile()
 	if touch_overlay:
 		touch_overlay.set_gameplay_active(true)
 	_power_up_spawn_timer = 0.0
@@ -2253,6 +2313,10 @@ func start_match_from_lobby() -> void:
 
 func return_to_lobby() -> void:
 	is_game_paused = false
+	if is_instance_valid(ui_hud_pause_btn):
+		ui_hud_pause_btn.visible = false
+	if is_instance_valid(ui_hint_label):
+		ui_hint_label.visible = false
 	if touch_overlay:
 		touch_overlay.set_gameplay_active(false)
 	if ui_pause_container:

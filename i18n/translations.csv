@@ -1,6 +1,7 @@
 keys,de,en
 LOBBY_TITLE,CRAZY CAGE FOOTBALL — LOBBY,CRAZY CAGE FOOTBALL — LOBBY
-LOBBY_SUBTITLE,"Wähle Steuerung ([1]-[4]) & Team ([Q],[W],[E],[R])  |  Start mit [SPACE / ENTER]","Choose Controls ([1]-[4]) & Team ([Q],[W],[E],[R])  |  Start with [SPACE / ENTER]"
+LOBBY_SUBTITLE,"Wähle Steuerung & Teams • 2 vs 2 Arcade Soccer","Choose Controls & Teams • 2 vs 2 Arcade Soccer"
+LOBBY_SUBTITLE_TOUCH,"Wähle Steuerung & Teams für alle 4 Slots","Choose Controls & Teams for all 4 slots"
 SLOT_TITLE,SLOT %d,SLOT %d
 TEAM_RED_LBL,TEAM ROT (1),TEAM RED (1)
 TEAM_BLUE_LBL,TEAM BLAU (2),TEAM BLUE (2)
@@ -13,9 +14,9 @@ CTRL_GAMEPAD_2,"SPIELER\n(Gamepad 3: Stick + A/B)","PLAYER\n(Gamepad 3: Stick + 
 CTRL_GAMEPAD_3,"SPIELER\n(Gamepad 4: Stick + A/B)","PLAYER\n(Gamepad 4: Stick + A/B)"
 CTRL_AI_BOT,"KI-BOT\n(Autonomes Dribbeln & Zıplama)","AI BOT\n(Autonomous Dribble & Zıplama)"
 KEY_HINT,"Taste [%d]: Modus\nTaste [%s]: Team wechseln","Key [%d]: Mode\nKey [%s]: Change Team"
-POWERUPS_ENABLED_LOBBY,"[P] POWER-UPS: AKTIVIERT  •  Super-Shot | Speed-Boots | Magnetfuß | Freeze-Tackle | Cage-Shaker","[P] POWER-UPS: ENABLED  •  Super-Shot | Speed-Boots | Magnet Foot | Freeze-Tackle | Cage-Shaker"
-POWERUPS_DISABLED_LOBBY,"[P] POWER-UPS: DEAKTIVIERT (Klassischer Pure-Cage-Modus ohne Pickups)","[P] POWER-UPS: DISABLED (Classic pure cage mode without pickups)"
-UI_HINTS_BAR,"[R]: Neustart  |  [ESC]: Lobby  |  [B]: Bot  |  [P]: Pickups  |  [T]: Arena  |  [M]: Musik  |  [L]: Sprache  |  [F11]: Vollbild","[R]: Restart  |  [ESC]: Lobby  |  [B]: Bot  |  [P]: Pickups  |  [T]: Arena  |  [M]: Music  |  [L]: Language  |  [F11]: Fullscreen"
+POWERUPS_ENABLED_LOBBY,"POWER-UPS: AKTIVIERT  •  Super-Shot | Speed-Boots | Magnetfuß | Freeze-Tackle | Cage-Shaker","POWER-UPS: ENABLED  •  Super-Shot | Speed-Boots | Magnet Foot | Freeze-Tackle | Cage-Shaker"
+POWERUPS_DISABLED_LOBBY,"POWER-UPS: DEAKTIVIERT (Klassischer Pure-Cage-Modus ohne Pickups)","POWER-UPS: DISABLED (Classic pure cage mode without pickups)"
+UI_HINTS_BAR,"[ESC] / [P] : Pause & Menü","[ESC] / [P] : Pause & Menu"
 MIN_PLAYERS_WARN,Mindestens 1 Spieler pro Team erforderlich!,At least 1 player per team required!
 BANNER_KICKOFF,KICK OFF!,KICK OFF!
 GOAL_RED,TOOOOR TEAM ROT!,GOOOOAL TEAM RED!
@@ -23,7 +24,7 @@ GOAL_BLUE,TOOOOR TEAM BLAU!,GOOOOAL TEAM BLUE!
 GOAL_GENERIC,TOOOOR!,GOOOOAL!
 WIN_RED,TEAM ROT GEWINNT!,TEAM RED WINS!
 WIN_BLUE,TEAM BLAU GEWINNT!,TEAM BLUE WINS!
-MATCH_DRAW,UNENTSCHIEDEN! Drücke [R] für Rematch,DRAW! Press [R] to rematch
+MATCH_DRAW,UNENTSCHIEDEN!,DRAW!
 POWERUPS_NOW_ON,POWER-UPS: AKTIVIERT,POWER-UPS: ENABLED
 POWERUPS_NOW_OFF,POWER-UPS: DEAKTIVIERT,POWER-UPS: DISABLED
 MUSIC_STATUS_ON,MUSIK: AN,MUSIC: ON
@@ -47,11 +48,14 @@ THEME_INDUSTRIAL,Industrie-Käfig (Nacht),Industrial Cage (Night)
 THEME_SUNNY,Sonnendach (Sommer),Sunny Rooftop (Summer)
 THEME_CYBER,Cyber Neon (Synthwave),Cyber Neon (Synthwave)
 THEME_STATUS_BANNER,ARENA: %s,ARENA: %s
-LOBBY_THEME_BTN,"[T] ARENA: %s","[T] ARENA: %s"
+LOBBY_THEME_BTN,"🏟️ ARENA: %s","🏟️ ARENA: %s"
 PAUSE_TITLE,SPIEL PAUSIERT,GAME PAUSED
-PAUSE_RESUME,[ESC] Weiterspielen,[ESC] Resume
-PAUSE_RESTART,[R] Match Neustarten,[R] Restart Match
-PAUSE_LOBBY,[L] Zurück zur Lobby,[L] Exit to Lobby
+PAUSE_RESUME,Weiterspielen,Resume
+PAUSE_RESTART,Match Neustarten,Restart Match
+PAUSE_LOBBY,Zurück zur Lobby,Exit to Lobby
+PAUSE_POWERUPS_BTN,"⚡ POWER-UPS: %s","⚡ POWER-UPS: %s"
+STATUS_ENABLED,AKTIVIERT,ENABLED
+STATUS_DISABLED,DEAKTIVIERT,DISABLED
 OPTIONS_TITLE,EINSTELLUNGEN & AUDIO,SETTINGS & AUDIO
 VOL_MASTER,Master-Lautstärke,Master Volume
 VOL_BGM,Musik (BGM),Music (BGM)
@@ -64,18 +68,20 @@ STATS_POWERUPS,Power-Ups genutzt,Power-Ups Used
 STATS_JUMPS,Zıplama-Sprünge,Zıplama Jumps
 STATS_TOP_SPEED,Top-Ballgeschwindigkeit,Top Ball Speed
 STATS_POSSESSION,Ballbesitz,Possession
-BTN_REMATCH,[R] Nochmal spielen,[R] Rematch
-BTN_LOBBY,[L] Lobby,[L] Lobby
+BTN_REMATCH,Nochmal spielen,Rematch
+BTN_LOBBY,Lobby,Lobby
 STATS_TACKLES,Tackles & Checks,Tackles & Checks
-CONTROLS_TITLE,STEUERUNGS-REFERENZ,CONTROLS REFERENCE
-CONTROLS_P1,"P1: WASD / Touch + Space (Sprung) + Shift (Boost)","P1: WASD / Touch + Space (Jump) + Shift (Boost)"
-CONTROLS_P2,"P2: Pfeile + Enter (Sprung) + Strg (Boost)","P2: Arrows + Enter (Jump) + Ctrl (Boost)"
-CONTROLS_GAMEPAD,"Gamepad: Analogstick + A/Kreuz + X/Viereck","Gamepad: Analog Stick + A/Cross + X/Square"
-FOCUS_MODE_DYNAMIC,KAMERA: DYNAMISCH,CAMERA: DYNAMIC
-FOCUS_MODE_BALL,KAMERA: BALL-FOKUS,CAMERA: BALL FOCUS
-FOCUS_MODE_BROADCAST,KAMERA: WEITWINKEL (BROADCAST),CAMERA: WIDE (BROADCAST)
-FOCUS_BTN,"[F] FOKUS: %s","[F] FOCUS: %s"
-LOBBY_START_BTN,"[START / LEERTASTE] ANSTOSS • SPIEL STARTEN","[START / SPACE] KICK OFF • START MATCH"
-LOBBY_HINT_GAMEPAD,"Gamepad: [D-Pad] Navigieren  •  [A] Auswählen  •  [START] Anstoß  •  [Y] Kamera-Fokus","Gamepad: [D-Pad] Navigate  •  [A] Select  •  [START] Kick Off  •  [Y] Camera Focus"
+CONTROLS_TITLE,STEUERUNG,CONTROLS
+CONTROLS_P1,"P1: WASD + Leertaste (Sprung) + Shift (Boost)","P1: WASD + Space (Jump) + Shift (Boost)"
+CONTROLS_P2,"P2: Pfeiltasten + Enter (Sprung) + Strg (Boost)","P2: Arrows + Enter (Jump) + Ctrl (Boost)"
+CONTROLS_GAMEPAD,"Gamepad: Analogstick + A (Sprung) + B/RB (Boost)","Gamepad: Analog Stick + A (Jump) + B/RB (Boost)"
+CONTROLS_TOUCH,"Touch: Virtueller Stick (links) • Sprung & Boost (rechts)","Touch: Virtual Stick (left) • Jump & Boost (right)"
+FOCUS_MODE_DYNAMIC,DYNAMISCH,DYNAMIC
+FOCUS_MODE_BALL,BALL-FOKUS,BALL FOCUS
+FOCUS_MODE_BROADCAST,WEITWINKEL,WIDE
+FOCUS_BTN,"📷 FOKUS: %s","📷 FOCUS: %s"
+LOBBY_START_BTN,"⚽ ANSTOSS • SPIEL STARTEN","⚽ KICK OFF • START MATCH"
+LOBBY_HINT_GAMEPAD,"Gamepad: [D-Pad] Navigieren  •  [A] Auswählen  •  [START] Anstoß","Gamepad: [D-Pad] Navigate  •  [A] Select  •  [START] Kick Off"
+LOBBY_HINT_TOUCH,"Tippe auf ANSTOSS zum Starten","Tap KICK OFF to start"
 BTN_CHANGE_TEAM,Team: %s,Team: %s
 BTN_CHANGE_MODE,Modus: %s,Mode: %s
