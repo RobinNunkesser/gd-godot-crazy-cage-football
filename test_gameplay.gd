@@ -321,6 +321,19 @@ func _test_main_scene() -> bool:
 	main_scene.toggle_fullscreen()
 	main_scene.toggle_fullscreen()
 	
+	# 2v2 Team-Koordination & Anstoß-Balance testen (Human + Bot vs 2x Bot)
+	main_scene.player3.set_control_type(CagePlayer.ControlType.AI_BOT)
+	main_scene.player3.team_id = 1
+	main_scene.player4.set_control_type(CagePlayer.ControlType.AI_BOT)
+	main_scene.player4.team_id = 2
+	assert(main_scene.player4._get_active_teammate() == main_scene.player2, "Player 4 active teammate should be Player 2")
+	assert(main_scene.player2._get_active_teammate() == main_scene.player4, "Player 2 active teammate should be Player 4")
+	
+	main_scene.ball.reset_to_center()
+	main_scene.player2._handle_bot_ai(0.016)
+	main_scene.player4._handle_bot_ai(0.016)
+	assert(main_scene.player4.boost_cooldown <= 0.0, "Defender bot should not waste boost at kickoff")
+	
 	main_scene._process(0.016)
 	main_scene.queue_free()
 	print("  -> MainCageFootball & 4-Player Teams OK.")

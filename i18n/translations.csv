@@ -78,7 +78,7 @@ CONTROLS_GAMEPAD,"Gamepad: Analogstick + A (Sprung) + B/RB (Boost)","Gamepad: An
 CONTROLS_TOUCH,"Touch: Virtueller Stick (links) • Sprung & Boost (rechts)","Touch: Virtual Stick (left) • Jump & Boost (right)"
 FOCUS_MODE_DYNAMIC,DYNAMISCH,DYNAMIC
 FOCUS_MODE_BALL,BALL-FOKUS,BALL FOCUS
-FOCUS_MODE_BROADCAST,WEITWINKEL,WIDE
+FOCUS_MODE_BROADCAST,WEITWINKEL (BROADCAST),WIDE (BROADCAST)
 FOCUS_BTN,"📷 FOKUS: %s","📷 FOCUS: %s"
 LOBBY_START_BTN,"⚽ ANSTOSS • SPIEL STARTEN","⚽ KICK OFF • START MATCH"
 LOBBY_HINT_GAMEPAD,"Gamepad: [D-Pad] Navigieren  •  [A] Auswählen  •  [START] Anstoß","Gamepad: [D-Pad] Navigate  •  [A] Select  •  [START] Kick Off"

@@ -276,10 +276,72 @@ func _handle_bot_ai(delta: float) -> void:
 			trigger_jump()
 		return
 	
+	var own_goal_x = -CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else CageConfig.CAGE_WIDTH_X * 0.5
+	var ball_vel = target_ball.linear_velocity if ("linear_velocity" in target_ball) else Vector3.ZERO
+	var is_kickoff = Vector2(ball_pos.x, ball_pos.z).length() < 1.4 and ball_vel.length() < 1.2
+	
+	# 2b. 2v2 Team-Koordination: Rollenverteilung (Angreifer vs. Absichernder Verteidiger)
+	var teammate = _get_active_teammate()
+	var is_defender = false
+	if teammate:
+		var mate_pos = teammate.global_position if teammate.is_inside_tree() else teammate.position
+		var mate_dist = Vector2(ball_pos.x - mate_pos.x, ball_pos.z - mate_pos.z).length()
+		var mate_vel = teammate.linear_velocity if ("linear_velocity" in teammate) else Vector3.ZERO
+		
+		if is_kickoff:
+			if teammate.control_type != ControlType.AI_BOT:
+				# Mitspieler ist menschlicher Spieler:
+				# Wenn der Mensch aktiv zum Anstoß sprintet (Tempo > 1.0), sichert der Bot hinten ab.
+				# Wenn der Mensch stehen bleibt, übernimmt der Bot den Anstoß.
+				if mate_vel.length() > 1.0 and mate_dist < dist_to_ball + 1.0:
+					is_defender = true
+				else:
+					is_defender = false
+			else:
+				# Beide sind Bots: Einer greift an, einer sichert das Tor ab (verhindert Zusammenstöße!)
+				if player_id > teammate.player_id:
+					is_defender = true
+				else:
+					is_defender = false
+		else:
+			# Normales Spielgeschehen:
+			var ball_threatening_own_goal = (absf(ball_pos.x - own_goal_x) < 4.8 and absf(ball_pos.z) < 3.2)
+			if not ball_threatening_own_goal:
+				# Wenn der Mitspieler deutlich näher am Ball ist, rückt dieser Bot in die Absicherung
+				if mate_dist < dist_to_ball - 0.8:
+					is_defender = true
+	
+	if is_defender:
+		# Taktische Verteidiger- & Torwart-Positionierung:
+		# Sichert das Tor ab (bei ~62% Spielfeldtiefe, ca. 7.4m vor der Torlinie, Z zentriert)
+		var guard_x = own_goal_x * 0.62
+		var guard_z = clampf(ball_pos.z * 0.45, -1.9, 1.9)
+		var guard_spot = Vector2(guard_x, guard_z)
+		
+		var steer_to_guard = guard_spot - Vector2(my_pos.x, my_pos.z)
+		if steer_to_guard.length_squared() > 0.1:
+			var move_dir = Vector3(steer_to_guard.normalized().x, 0.0, steer_to_guard.normalized().y)
+			apply_central_force(move_dir * CageConfig.PLAYER_DRIVE_FORCE * bot_difficulty)
+		
+		# Aktive Schussabwehr / Paraden:
+		# Fliegt ein schneller Ball Richtung eigenes Tor, springe oder hechte dazwischen!
+		if ball_vel.length() > 2.2:
+			var ball_vel_2d = Vector2(ball_vel.x, ball_vel.z)
+			var to_own_goal = Vector2(own_goal_x - ball_pos.x, 0.0)
+			if ball_vel_2d.dot(to_own_goal) > 0.0:
+				var intercept_vec = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z)
+				if intercept_vec.length() < 3.8:
+					var int_dir = intercept_vec.normalized()
+					apply_central_force(Vector3(int_dir.x, 0.0, int_dir.y) * CageConfig.PLAYER_DRIVE_FORCE * bot_difficulty * 1.5)
+					if intercept_vec.length() < 2.0 and my_pos.y <= CageConfig.PLAYER_RADIUS + 0.35:
+						trigger_jump()
+					if intercept_vec.length() < 2.8 and boost_cooldown <= 0.0:
+						trigger_boost(int_dir)
+		return
+	
 	# 3. Taktische Power-Up-Wahrnehmung (Opportunistic Pickup Hunting)
 	# Wenn der Bot noch keinen aktiven Buff hat und der Ball nicht akut das eigene Tor bedroht:
 	var owns_buff = (has_super_shot or speed_boost_timer > 1.0 or magnet_timer > 1.0 or freeze_tackle_ready)
-	var own_goal_x = -CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else CageConfig.CAGE_WIDTH_X * 0.5
 	var ball_threatening_own_goal = (absf(ball_pos.x - own_goal_x) < 5.5 and absf(ball_pos.z) < 3.5)
 	
 	var target_pickup: CagePowerUp = null
@@ -316,7 +378,11 @@ func _handle_bot_ai(delta: float) -> void:
 	# 4. Flanken- und Ecken-Taktik (Corner Clearance)
 	# Ziel-Tor: Team 1 (Rot) greift nach rechts (X > 0) an; Team 2 (Blau) greift nach links (X < 0) an.
 	var goal_x = CageConfig.CAGE_WIDTH_X * 0.5 if team_id == 1 else -CageConfig.CAGE_WIDTH_X * 0.5
-	var to_goal = Vector2(goal_x - ball_pos.x, 0.0).normalized()
+	var target_goal_z = 0.0
+	if not is_kickoff:
+		# Zielt variabel auf die freien Torecken statt stur Mitte
+		target_goal_z = clampf(-signf(ball_pos.z if ball_pos.z != 0.0 else 1.0) * 1.2, -1.6, 1.6)
+	var to_goal = Vector2(goal_x - ball_pos.x, target_goal_z - ball_pos.z).normalized()
 	
 	var desired_push_dir = to_goal
 	var is_in_corner_or_flank = absf(ball_pos.z) > 3.8 or (absf(ball_pos.x) > CageConfig.CAGE_WIDTH_X * 0.5 - 3.2 and absf(ball_pos.z) > 2.2)
@@ -325,6 +391,10 @@ func _handle_bot_ai(delta: float) -> void:
 		# In der Ecke / an der Bande nicht ins Aus drücken, sondern Ball quer zur Spielfeldmitte (Z=0) herausspielen!
 		var center_z_dir = -signf(ball_pos.z)
 		desired_push_dir = Vector2(to_goal.x * 0.5, center_z_dir * 1.0).normalized()
+	elif is_kickoff:
+		# Am Anstoßpunkt leicht versetzt anspielen, damit ein dynamisches Anstoß-Duell entsteht
+		var kickoff_z_offset = 0.45 * signf(my_pos.z if my_pos.z != 0.0 else 1.0)
+		desired_push_dir = Vector2(to_goal.x, kickoff_z_offset).normalized()
 	
 	# Positioniere dich hinter den Ball bezogen auf die gewünschte Stoßrichtung
 	var attack_spot = Vector2(ball_pos.x, ball_pos.z) - desired_push_dir * 0.95
@@ -353,10 +423,26 @@ func _handle_bot_ai(delta: float) -> void:
 		trigger_jump()
 	
 	# Boost / Rammstoß wenn Ball im Schussfeld liegt
-	if dist_to_ball < 2.5 and boost_cooldown <= 0.0:
+	# Am Anstoßpunkt (ruhender Ball im Mittelkreis) kein sofortiger Turbo-Boost durch den ruhenden Ball,
+	# um unfaire und unrealistische Instant-Anstoßtore zu verhindern!
+	var is_kickoff_ball = Vector2(ball_pos.x, ball_pos.z).length() < 1.4 and ball_vel.length() < 2.0
+	if dist_to_ball < 2.5 and boost_cooldown <= 0.0 and not is_kickoff_ball:
 		var dir_to_ball = Vector2(ball_pos.x - my_pos.x, ball_pos.z - my_pos.z).normalized()
 		if dir_to_ball.dot(desired_push_dir) > 0.5:
 			trigger_boost(dir_to_ball)
+
+func _get_active_teammate() -> CagePlayer:
+	var nodes: Array[Node] = []
+	if is_inside_tree():
+		nodes = get_tree().get_nodes_in_group("players")
+	if nodes.is_empty() and get_parent():
+		for child in get_parent().get_children():
+			if child is CagePlayer:
+				nodes.append(child)
+	for n in nodes:
+		if n is CagePlayer and n != self and n.team_id == team_id and n.control_type != ControlType.OFF:
+			return n
+	return null
 
 func _handle_input(_delta: float) -> void:
 	if control_type == ControlType.OFF or control_type == ControlType.AI_BOT:
